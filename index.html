@@ -22,8 +22,8 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
 .fade{animation:fadeIn .22s ease}
 .overlay{position:absolute;left:0;right:0;bottom:0;z-index:400;background:rgba(5,10,20,0.97);backdrop-filter:blur(24px);border-radius:24px 24px 0 0;padding:20px 20px 40px;border-top:1px solid rgba(255,255,255,0.09);max-height:90dvh;overflow-y:auto}
 .pill{width:38px;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 auto 18px}
-.navbar{position:absolute;bottom:0;left:0;right:0;z-index:300;background:rgba(5,10,20,0.95);backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,0.07);display:flex;padding:10px 0 20px}
-.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;font-family:'Nunito',sans-serif;cursor:pointer;color:#475569;transition:color .2s;padding:4px}
+.navbar{position:absolute;bottom:0;left:0;right:0;z-index:300;background:rgba(5,10,20,0.95);backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,0.07);display:flex;flex-direction:row!important;flex-wrap:nowrap;padding:10px 0 24px;width:100%}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;font-family:'Nunito',sans-serif;cursor:pointer;color:#475569;transition:color .2s;padding:4px 0;min-width:0}
 .nav-btn.active{color:#22c55e}
 /* Mapbox overrides */
 .mapboxgl-ctrl-bottom-right{bottom:85px!important;right:12px!important}
@@ -73,13 +73,13 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
   </div>
 
   <!-- BTN REPORTAR -->
-  <div id="reportBtn" style="display:none;position:absolute;bottom:82px;left:50%;transform:translateX(-50%);z-index:200;flex-direction:column;align-items:center;gap:6px">
-    <button class="btn" onclick="iniciarReporte()" style="width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#16a34a);border:4px solid rgba(255,255,255,0.22);box-shadow:0 4px 28px rgba(34,197,94,.6),0 0 0 10px rgba(34,197,94,.1);font-size:28px">📍</button>
-    <div style="background:rgba(5,10,20,0.9);backdrop-filter:blur(8px);border-radius:8px;padding:3px 10px;font-size:11px;font-weight:800;color:#22c55e">REPORTAR</div>
+  <div id="reportBtn" style="display:none;position:absolute;bottom:90px;left:50%;transform:translateX(-50%);z-index:200;flex-direction:column;align-items:center;gap:6px">
+    <button class="btn" onclick="iniciarReporte()" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#16a34a);border:4px solid rgba(255,255,255,0.25);box-shadow:0 4px 28px rgba(34,197,94,.65),0 0 0 10px rgba(34,197,94,.12);font-size:30px">📍</button>
+    <div style="background:rgba(5,10,20,0.92);backdrop-filter:blur(8px);border-radius:8px;padding:4px 12px;font-size:11px;font-weight:800;color:#22c55e;letter-spacing:.5px">REPORTAR</div>
   </div>
 
   <!-- PIN POPUP -->
-  <div id="pinPopup" style="display:none;position:absolute;bottom:82px;left:14px;right:14px;z-index:200">
+  <div id="pinPopup" style="display:none;position:absolute;bottom:90px;left:14px;right:14px;z-index:200">
     <div id="pinInner" style="background:rgba(5,10,20,0.97);backdrop-filter:blur(18px);border-radius:20px;padding:16px;box-shadow:0 12px 40px rgba(0,0,0,.7)"></div>
   </div>
 
@@ -403,14 +403,55 @@ function publicarPin() {
 }
 
 function detectarComuna(lat, lng) {
-  // Aproximación simple por coordenadas de Santiago
-  if (lat < -33.55) return "La Pintana";
-  if (lng < -70.75) return "Maipú";
-  if (lng < -70.70) return "Pudahuel";
-  if (lat > -33.41) return "Las Condes";
-  if (lat > -33.43) return "Providencia";
-  if (lat > -33.45) return "Ñuñoa";
-  return "Santiago Centro";
+  // Comunas del Gran Santiago por coordenadas aproximadas
+  const comunas = [
+    { nombre:"Lo Barnechea",     latMin:-33.32, latMax:-33.37, lngMin:-70.57, lngMax:-70.48 },
+    { nombre:"Las Condes",       latMin:-33.37, latMax:-33.44, lngMin:-70.60, lngMax:-70.48 },
+    { nombre:"Vitacura",         latMin:-33.37, latMax:-33.42, lngMin:-70.63, lngMax:-70.58 },
+    { nombre:"Providencia",      latMin:-33.42, latMax:-33.45, lngMin:-70.63, lngMax:-70.57 },
+    { nombre:"Ñuñoa",            latMin:-33.44, latMax:-33.48, lngMin:-70.63, lngMax:-70.57 },
+    { nombre:"La Reina",         latMin:-33.43, latMax:-33.48, lngMin:-70.57, lngMax:-70.50 },
+    { nombre:"Peñalolén",        latMin:-33.47, latMax:-33.54, lngMin:-70.57, lngMax:-70.48 },
+    { nombre:"Macul",            latMin:-33.48, latMax:-33.52, lngMin:-70.63, lngMax:-70.57 },
+    { nombre:"San Joaquín",      latMin:-33.49, latMax:-33.53, lngMin:-70.66, lngMax:-70.62 },
+    { nombre:"La Florida",       latMin:-33.51, latMax:-33.58, lngMin:-70.62, lngMax:-70.54 },
+    { nombre:"La Pintana",       latMin:-33.55, latMax:-33.62, lngMin:-70.67, lngMax:-70.60 },
+    { nombre:"San Bernardo",     latMin:-33.58, latMax:-33.68, lngMin:-70.73, lngMax:-70.60 },
+    { nombre:"La Granja",        latMin:-33.52, latMax:-33.56, lngMin:-70.66, lngMax:-70.61 },
+    { nombre:"El Bosque",        latMin:-33.55, latMax:-33.59, lngMin:-70.69, lngMax:-70.64 },
+    { nombre:"Pedro Aguirre Cerda",latMin:-33.49,latMax:-33.53,lngMin:-70.70,lngMax:-70.65 },
+    { nombre:"San Miguel",       latMin:-33.48, latMax:-33.52, lngMin:-70.69, lngMax:-70.64 },
+    { nombre:"Lo Espejo",        latMin:-33.51, latMax:-33.56, lngMin:-70.73, lngMax:-70.68 },
+    { nombre:"Estación Central", latMin:-33.45, latMax:-33.50, lngMin:-70.72, lngMax:-70.67 },
+    { nombre:"Pudahuel",         latMin:-33.43, latMax:-33.52, lngMin:-70.80, lngMax:-70.71 },
+    { nombre:"Maipú",            latMin:-33.49, latMax:-33.57, lngMin:-70.80, lngMax:-70.71 },
+    { nombre:"Cerrillos",        latMin:-33.49, latMax:-33.54, lngMin:-70.74, lngMax:-70.69 },
+    { nombre:"Quilicura",        latMin:-33.34, latMax:-33.40, lngMin:-70.76, lngMax:-70.68 },
+    { nombre:"Huechuraba",       latMin:-33.34, latMax:-33.39, lngMin:-70.68, lngMax:-70.61 },
+    { nombre:"Recoleta",         latMin:-33.39, latMax:-33.43, lngMin:-70.66, lngMax:-70.62 },
+    { nombre:"Independencia",    latMin:-33.41, latMax:-33.44, lngMin:-70.67, lngMax:-70.64 },
+    { nombre:"Conchalí",         latMin:-33.37, latMax:-33.41, lngMin:-70.69, lngMax:-70.65 },
+    { nombre:"Renca",            latMin:-33.39, latMax:-33.43, lngMin:-70.74, lngMax:-70.68 },
+    { nombre:"Lo Prado",         latMin:-33.43, latMax:-33.47, lngMin:-70.75, lngMax:-70.70 },
+    { nombre:"Cerro Navia",      latMin:-33.42, latMax:-33.46, lngMin:-70.77, lngMax:-70.73 },
+    { nombre:"Quinta Normal",    latMin:-33.43, latMax:-33.46, lngMin:-70.71, lngMax:-70.67 },
+    { nombre:"Santiago Centro",  latMin:-33.43, latMax:-33.47, lngMin:-70.68, lngMax:-70.63 },
+  ];
+  for (const c of comunas) {
+    if (lat >= c.latMin && lat <= c.latMax && lng >= c.lngMin && lng <= c.lngMax) {
+      return c.nombre;
+    }
+  }
+  // Fallback: retornar la más cercana por distancia
+  let closest = "Santiago";
+  let minDist = Infinity;
+  for (const c of comunas) {
+    const clat = (c.latMin + c.latMax) / 2;
+    const clng = (c.lngMin + c.lngMax) / 2;
+    const dist = Math.sqrt((lat-clat)**2 + (lng-clng)**2);
+    if (dist < minDist) { minDist = dist; closest = c.nombre; }
+  }
+  return closest;
 }
 
 // ── MARKERS ──
