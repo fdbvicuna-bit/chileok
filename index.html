@@ -380,36 +380,34 @@ function onFotoSelected(input) {
 
 async function analizarConIA() {
   const box = document.getElementById("aiBox");
-  box.style.display="block";
-  box.style.cssText="display:block;padding:13px 15px;border-radius:13px;margin-bottom:14px;font-size:13px;font-weight:600;line-height:1.5;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);color:#93c5fd";
-  box.innerHTML=`<div style="display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border:2px solid rgba(147,197,253,0.3);border-top:2px solid #93c5fd;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0"></div>Verificando con IA...</div>`;
+  box.style.cssText="display:block;padding:13px 15px;border-radius:13px;margin-bottom:14px;font-size:13px;font-weight:600;line-height:1.5;background:#eff6ff;border:1px solid #bfdbfe;color:#3b82f6";
+  box.innerHTML=`<div style="display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border:2px solid #bfdbfe;border-top:2px solid #3b82f6;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0"></div>Verificando con IA que sea basura real...</div>`;
   aiOk=false; checkPublicar();
+
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages",{
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:300,
-        messages:[{role:"user",content:[
-          {type:"image",source:{type:"base64",media_type:"image/jpeg",data:fotoB64}},
-          {type:"text",text:`Eres verificador de LIF, app chilena de reporte de basura. Analiza esta foto y responde SOLO con JSON sin markdown:
-{"es_basura":true/false,"descripcion":"1 frase","severidad":"Leve|Moderada|Grave|Muy Grave","aprobado":true/false}
-"aprobado" es true solo si la foto muestra claramente basura o residuos en espacio público.`}
-        ]}]
-      })
+    const res = await fetch("/api/verificar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imagen: fotoB64, tipo: tipoSel })
     });
-    const data = await res.json();
-    const json = JSON.parse(data.content[0].text.replace(/```json|```/g,"").trim());
+
+    if (!res.ok) throw new Error("Error servidor");
+    const json = await res.json();
+
     if (json.aprobado) {
-      aiOk=true;
-      box.style.background="rgba(34,197,94,0.1)"; box.style.border="1px solid rgba(34,197,94,0.3)"; box.style.color="#86efac";
-      box.innerHTML=`✅ <strong>IA verificó:</strong> ${json.descripcion} · ${json.severidad}`;
+      aiOk = true;
+      box.style.cssText="display:block;padding:13px 15px;border-radius:13px;margin-bottom:14px;font-size:13px;font-weight:600;line-height:1.5;background:#f0fdf4;border:1px solid #bbf7d0;color:#16a34a";
+      box.innerHTML=`✅ <strong>Verificado:</strong> ${json.descripcion} · <strong>${json.severidad}</strong>`;
     } else {
-      box.style.background="rgba(239,68,68,0.1)"; box.style.border="1px solid rgba(239,68,68,0.3)"; box.style.color="#fca5a5";
-      box.innerHTML=`❌ No se detectó basura real. Saca una foto más clara.`;
+      aiOk = false;
+      box.style.cssText="display:block;padding:13px 15px;border-radius:13px;margin-bottom:14px;font-size:13px;font-weight:600;line-height:1.5;background:#fef2f2;border:1px solid #fecaca;color:#dc2626";
+      box.innerHTML=`❌ <strong>Foto rechazada:</strong> ${json.motivo_rechazo || "No se detectó basura real"}. Saca una foto más clara del punto crítico.`;
     }
-  } catch {
-    aiOk=true;
-    box.style.background="rgba(234,179,8,0.1)"; box.style.border="1px solid rgba(234,179,8,0.25)"; box.style.color="#fde047";
-    box.innerHTML=`⚠️ Verificación IA no disponible. Reporte pendiente de revisión.`;
+  } catch(e) {
+    // Si falla la función, bloqueamos el reporte
+    aiOk = false;
+    box.style.cssText="display:block;padding:13px 15px;border-radius:13px;margin-bottom:14px;font-size:13px;font-weight:600;line-height:1.5;background:#fefce8;border:1px solid #fef08a;color:#ca8a04";
+    box.innerHTML=`⚠️ No se pudo verificar la foto. Revisa tu conexión e intenta de nuevo.`;
   }
   checkPublicar();
 }
