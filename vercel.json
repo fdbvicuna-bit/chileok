@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/verificar.js": {
+      "maxDuration": 30
+    }
+  }
+}
