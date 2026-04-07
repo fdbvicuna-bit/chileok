@@ -19,6 +19,10 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes truckBounce{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-3px) rotate(2deg)}}
+@keyframes truckMove{0%{transform:translateX(-10px)}100%{transform:translateX(10px)}}
+@keyframes wheelSpin{to{transform:rotate(360deg)}}
+@keyframes dustPuff{0%{opacity:.8;transform:scale(0.5)}100%{opacity:0;transform:scale(2)}}
 .sheet{animation:slideUp .3s cubic-bezier(.32,.72,0,1)}
 .overlay{position:absolute;left:0;right:0;bottom:0;z-index:400;background:rgba(255,255,255,0.98);backdrop-filter:blur(24px);border-radius:24px 24px 0 0;padding:20px 20px 40px;border-top:1px solid rgba(0,0,0,0.06);max-height:92dvh;overflow-y:auto;box-shadow:0 -8px 40px rgba(0,0,0,0.12)}
 .pill{width:38px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px}
@@ -219,7 +223,8 @@ const TIPOS = {
 };
 
 // ── STATE ──
-let map, userLat, userLng, userMarker, currentUser;
+let map, userLat, userLng, userMarker, truckMarker, currentUser;
+let lastHeading = 0;
 let tipoSel="", fotoFile=null, fotoB64="", aiOk=false;
 let rankFiltro="todos", vista="mapa";
 let notifTimer, pendingMarker=null;
@@ -309,6 +314,14 @@ function onGPS(pos) {
 function mostrarGPSDenied() { hide("loading"); showEl("gpsDenied","flex"); }
 
 // ── MAP ──
+function rotateTruck(heading) {
+  if (!truckMarker) return;
+  const h = heading || lastHeading;
+  lastHeading = h;
+  const el = truckMarker.getElement();
+  if (el) el.style.transform = `rotate(${h}deg)`;
+}
+
 function initMap() {
   mapboxgl.accessToken = MAPBOX_TOKEN;
   map = new mapboxgl.Map({
@@ -324,9 +337,49 @@ async function onMapLoad() {
   const el = document.createElement("div");
   el.style.cssText="width:18px;height:18px;border-radius:50%;background:#3b82f6;border:3px solid #fff;box-shadow:0 0 0 6px rgba(59,130,246,0.25)";
   userMarker = new mapboxgl.Marker({element:el,anchor:"center"}).setLngLat([userLng,userLat]).addTo(map);
+
+  // 🚛 Camión de basura animado (el usuario)
+  const truck = document.createElement("div");
+  truck.id = "truckMarker";
+  truck.innerHTML = `
+    <div style="position:relative;animation:truckBounce 0.6s ease-in-out infinite;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.25))">
+      <svg width="52" height="38" viewBox="0 0 52 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Cuerpo principal -->
+        <rect x="2" y="8" width="34" height="20" rx="3" fill="#16a34a"/>
+        <!-- Cabina -->
+        <rect x="36" y="12" width="14" height="16" rx="3" fill="#15803d"/>
+        <!-- Ventana cabina -->
+        <rect x="38" y="14" width="9" height="8" rx="2" fill="#bfdbfe"/>
+        <!-- Techo cabina -->
+        <rect x="37" y="10" width="13" height="4" rx="2" fill="#166534"/>
+        <!-- Línea separadora -->
+        <rect x="34" y="10" width="3" height="18" rx="1" fill="#166534"/>
+        <!-- Letrero LIF -->
+        <rect x="6" y="12" width="22" height="10" rx="2" fill="#dcfce7"/>
+        <text x="17" y="20" text-anchor="middle" font-size="7" font-weight="900" fill="#16a34a" font-family="Nunito,sans-serif">LIF</text>
+        <!-- Ruedas -->
+        <circle cx="12" cy="30" r="6" fill="#1e293b"/>
+        <circle cx="12" cy="30" r="3" fill="#64748b"/>
+        <circle cx="38" cy="30" r="6" fill="#1e293b"/>
+        <circle cx="38" cy="30" r="3" fill="#64748b"/>
+        <!-- Faro -->
+        <rect x="48" y="18" width="4" height="5" rx="1" fill="#fde047"/>
+      </svg>
+      <!-- Polvo animado -->
+      <div style="position:absolute;left:-8px;bottom:2px;width:10px;height:10px;border-radius:50%;background:rgba(100,116,139,0.3);animation:dustPuff 0.8s ease-out infinite"></div>
+    </div>`;
+  truck.style.cssText = "background:none;border:none;cursor:default";
+  truckMarker = new mapboxgl.Marker({element:truck, anchor:"bottom"})
+    .setLngLat([userLng, userLat])
+    .addTo(map);
+
+  // Seguir ubicación — mueve AMBOS marcadores
   navigator.geolocation.watchPosition(pos=>{
     userLat=pos.coords.latitude; userLng=pos.coords.longitude;
     userMarker.setLngLat([userLng,userLat]);
+    truckMarker.setLngLat([userLng,userLat]);
+    // Rotar camión según dirección
+    rotateTruck(pos.coords.heading);
   },null,{enableHighAccuracy:true});
 
   hide("loading");
@@ -484,65 +537,145 @@ async function publicarPin() {
 }
 
 // ── MARKERS ──
-function makePinHTML(tipo, ver) {
+function makePinHTML(tipo, ver, estado) {
   const c = TIPOS[tipo]||TIPOS["Microbasural"];
-  return `<div class="lif-marker" style="position:relative;display:inline-block;filter:drop-shadow(0 4px 8px ${c.color}99)">
-    <div style="width:38px;height:38px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${c.color};display:flex;align-items:center;justify-content:center;border:2.5px solid rgba(255,255,255,0.45)">
-      <span style="transform:rotate(45deg);font-size:16px;line-height:1">${c.emoji}</span>
+  const limpio = estado === "limpio";
+  const color = limpio ? "#94a3b8" : c.color;
+  const emoji = limpio ? "✅" : c.emoji;
+  return `<div style="position:relative;display:inline-block;filter:drop-shadow(0 3px 6px ${color}88);opacity:${limpio?0.55:1}">
+    <div style="width:38px;height:38px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${color};display:flex;align-items:center;justify-content:center;border:2.5px solid rgba(255,255,255,0.85)">
+      <span style="transform:rotate(45deg);font-size:16px;line-height:1">${emoji}</span>
     </div>
-    <div style="width:6px;height:3px;background:rgba(0,0,0,0.3);border-radius:50%;margin:1px auto 0;filter:blur(1.5px)"></div>
-    ${ver>1?`<div style="position:absolute;top:-5px;right:-10px;background:#fff;color:#111;border-radius:8px;font-size:9px;font-weight:900;padding:1px 5px">×${ver}</div>`:""}
+    <div style="width:6px;height:3px;background:rgba(0,0,0,0.2);border-radius:50%;margin:1px auto 0;filter:blur(1.5px)"></div>
+    ${ver>1?`<div style="position:absolute;top:-5px;right:-10px;background:#fff;color:#111;border-radius:8px;font-size:9px;font-weight:900;padding:1px 5px;box-shadow:0 1px 4px rgba(0,0,0,0.15)">×${ver}</div>`:""}
   </div>`;
 }
+
+const markerRefs = {};
 
 function agregarMarker(pin) {
   if (!map) return;
   const el = document.createElement("div");
-  el.innerHTML = makePinHTML(pin.tipo, pin.verificaciones||1);
+  el.innerHTML = makePinHTML(pin.tipo, pin.verificaciones||1, pin.estado||"activo");
   el.style.cssText="background:none;border:none;cursor:pointer";
   el.addEventListener("click", e=>{ e.stopPropagation(); mostrarPopup(pin); });
-  new mapboxgl.Marker({element:el,anchor:"bottom"}).setLngLat([pin.lng,pin.lat]).addTo(map);
+  const m = new mapboxgl.Marker({element:el,anchor:"bottom"}).setLngLat([pin.lng,pin.lat]).addTo(map);
+  markerRefs[pin.id] = { marker:m, pin };
 }
 
 function mostrarPopup(pin) {
   const cfg = TIPOS[pin.tipo]||TIPOS["Microbasural"];
+  const limpio = pin.estado === "limpio";
   hide("reportBtn");
   const d = new Date(pin.created_at);
   const tiempo = d.toLocaleDateString("es-CL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
-  document.getElementById("pinInner").style.border=`1px solid ${cfg.color}33`;
+  const limpiezasNecesarias = 3;
+  const limpiezasActuales = pin.confirmaciones_limpieza || 0;
+  const barPct = Math.min(100, (limpiezasActuales / limpiezasNecesarias) * 100);
+
+  document.getElementById("pinInner").style.border = limpio ? "1px solid #bbf7d0" : `1px solid ${cfg.color}33`;
   document.getElementById("pinInner").innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
       <div style="display:flex;gap:10px;align-items:center">
-        <div style="width:42px;height:42px;border-radius:12px;font-size:20px;background:${cfg.color}15;display:flex;align-items:center;justify-content:center">${cfg.emoji}</div>
+        <div style="width:42px;height:42px;border-radius:12px;font-size:20px;background:${limpio?"#f0fdf4":`${cfg.color}15`};display:flex;align-items:center;justify-content:center">${limpio?"✅":cfg.emoji}</div>
         <div>
           <div style="font-size:15px;font-weight:800;color:#1e293b">${pin.tipo}</div>
           <div style="font-size:11px;color:#94a3b8">${pin.comuna} · ${tiempo}</div>
+          ${limpio?`<div style="font-size:11px;color:#16a34a;font-weight:700;margin-top:2px">🧹 Reportado como limpio</div>`:""}
         </div>
       </div>
       <button class="btn" onclick="cerrarPopup()" style="background:#f1f5f9;color:#64748b;border-radius:8px;padding:4px 9px;font-size:12px;font-weight:700">✕</button>
     </div>
-    ${pin.foto_url?`<img src="${pin.foto_url}" style="width:100%;height:120px;object-fit:cover;border-radius:12px;margin-bottom:12px"/>`:""}
-    <div style="display:flex;gap:8px">
+    ${pin.foto_url?`<img src="${pin.foto_url}" style="width:100%;height:110px;object-fit:cover;border-radius:12px;margin-bottom:12px"/>`:""}
+    
+    <div style="display:flex;gap:8px;margin-bottom:${limpio?"0":"12px"}">
       <div style="flex:1;background:#fef2f2;border-radius:10px;padding:8px;text-align:center;border:1px solid #fecaca">
-        <div style="font-size:18px;font-weight:900;color:#ef4444">${pin.pts}</div>
-        <div style="font-size:10px;color:#94a3b8">puntos</div>
+        <div style="font-size:17px;font-weight:900;color:#ef4444">${pin.pts}</div>
+        <div style="font-size:10px;color:#94a3b8">pts</div>
       </div>
       <div style="flex:1;background:#f1f5f9;border-radius:10px;padding:8px;text-align:center;border:1px solid #e2e8f0">
-        <div style="font-size:18px;font-weight:900;color:#1e293b">×${pin.verificaciones||1}</div>
-        <div style="font-size:10px;color:#94a3b8">confirmados</div>
+        <div style="font-size:17px;font-weight:900;color:#1e293b">×${pin.verificaciones||1}</div>
+        <div style="font-size:10px;color:#94a3b8">vistos</div>
       </div>
-      <button class="btn" onclick="confirmarPin('${pin.id}')" style="flex:2;background:#f0fdf4;border-radius:10px;border:1px solid #bbf7d0;color:#16a34a;font-size:12px;font-weight:700;padding:8px">
-        👍 Confirmar<br><span style="font-size:10px;opacity:.7">también lo vi</span>
+      <div style="flex:1;background:#f0fdf4;border-radius:10px;padding:8px;text-align:center;border:1px solid #bbf7d0">
+        <div style="font-size:17px;font-weight:900;color:#16a34a">${limpiezasActuales}/${limpiezasNecesarias}</div>
+        <div style="font-size:10px;color:#94a3b8">limpios</div>
+      </div>
+    </div>
+
+    ${!limpio ? `
+    <!-- Barra de progreso limpieza -->
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;margin-bottom:4px">
+        <span>Progreso de limpieza</span>
+        <span>${limpiezasActuales}/${limpiezasNecesarias} confirmaciones</span>
+      </div>
+      <div style="height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${barPct}%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:3px;transition:width .5s ease"></div>
+      </div>
+    </div>
+
+    <!-- Botones acción -->
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="accionPin('${pin.id}','visto')" style="flex:1;background:#eff6ff;border-radius:10px;border:1px solid #bfdbfe;color:#3b82f6;font-size:12px;font-weight:700;padding:10px 6px;text-align:center">
+        👀 También<br><span style="font-size:10px;opacity:.8">lo vi</span>
       </button>
-    </div>`;
+      <button class="btn" onclick="accionPin('${pin.id}','limpio')" style="flex:1;background:#f0fdf4;border-radius:10px;border:1px solid #bbf7d0;color:#16a34a;font-size:12px;font-weight:700;padding:10px 6px;text-align:center">
+        🧹 Ya está<br><span style="font-size:10px;opacity:.8">limpio</span>
+      </button>
+    </div>` : `
+    <div style="background:#f0fdf4;border-radius:12px;padding:12px;text-align:center;border:1px solid #bbf7d0">
+      <div style="font-size:13px;font-weight:700;color:#16a34a">✅ Este punto fue limpiado</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:3px">Gracias a la comunidad LIF</div>
+    </div>`}`;
   showEl("pinPopup","block");
 }
 
 function cerrarPopup() { hide("pinPopup"); showEl("reportBtn","flex"); }
 
-async function confirmarPin(id) {
-  await sb.from("reportes").update({ verificaciones: sb.rpc ? undefined : 1 }).eq("id", id);
-  notify("✅ ¡Confirmado! Gracias");
+async function accionPin(id, tipo) {
+  if (!currentUser) { notify("Debes iniciar sesión"); return; }
+
+  // Evitar doble voto
+  const { data: yaVoto } = await sb.from("confirmaciones")
+    .select("id").eq("reporte_id", id).eq("user_id", currentUser.id).eq("tipo", tipo).single();
+  if (yaVoto) { notify("Ya confirmaste esto antes 👍"); return; }
+
+  // Registrar confirmación
+  await sb.from("confirmaciones").insert({ reporte_id:id, user_id:currentUser.id, tipo });
+
+  if (tipo === "visto") {
+    // Sumar verificación
+    const ref = markerRefs[id];
+    const vActual = (ref?.pin?.verificaciones || 1) + 1;
+    await sb.from("reportes").update({ verificaciones: vActual }).eq("id", id);
+    if (ref) ref.pin.verificaciones = vActual;
+    notify("👀 ¡Gracias! Basura confirmada");
+
+  } else if (tipo === "limpio") {
+    // Sumar confirmación de limpieza
+    const ref = markerRefs[id];
+    const lActual = (ref?.pin?.confirmaciones_limpieza || 0) + 1;
+    const nuevoEstado = lActual >= 3 ? "limpio" : "activo";
+    await sb.from("reportes").update({
+      confirmaciones_limpieza: lActual,
+      estado: nuevoEstado
+    }).eq("id", id);
+
+    if (ref) {
+      ref.pin.confirmaciones_limpieza = lActual;
+      ref.pin.estado = nuevoEstado;
+      // Actualizar visual del marker
+      ref.marker.getElement().innerHTML = makePinHTML(ref.pin.tipo, ref.pin.verificaciones||1, nuevoEstado);
+    }
+
+    if (nuevoEstado === "limpio") {
+      notify("🧹 ¡Punto marcado como limpio! La comuna suma puntos positivos");
+      await actualizarRankingDesdeDB();
+    } else {
+      notify(`🧹 Limpieza reportada (${lActual}/3 confirmaciones)`);
+    }
+  }
   cerrarPopup();
 }
 
@@ -562,8 +695,13 @@ async function actualizarRankingDesdeDB() {
 function actualizarRanking(pins) {
   const mapa = {};
   pins.forEach(p => {
-    if (!mapa[p.comuna]) mapa[p.comuna]={ nombre:p.comuna, tipo:"comuna", pts:0, reportes:0 };
-    mapa[p.comuna].pts += p.pts;
+    if (!mapa[p.comuna]) mapa[p.comuna]={ nombre:p.comuna, tipo:"comuna", pts:0, reportes:0, limpios:0 };
+    if (p.estado === "limpio") {
+      mapa[p.comuna].pts += Math.abs(p.pts) * 0.5; // recupera la mitad al limpiar
+      mapa[p.comuna].limpios++;
+    } else {
+      mapa[p.comuna].pts += p.pts;
+    }
     mapa[p.comuna].reportes++;
     if (p.tipo==="Basura en autopista") mapa[p.comuna].tipo="autopista";
   });
