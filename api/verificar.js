@@ -1,84 +1,815 @@
-export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>LIF — Por un País Limpio</title>
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background:#f1f5f9;color:#1e293b}
+#app{position:relative;width:100%;height:100dvh;overflow:hidden}
+#map{position:absolute;inset:0;z-index:1}
+.btn{cursor:pointer;border:none;font-family:'Nunito',sans-serif;transition:all .18s}
+.btn:active{transform:scale(.95)}
+@keyframes slideUp{from{transform:translateY(110%)}to{transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes truckBounce{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-3px) rotate(2deg)}}
+@keyframes truckMove{0%{transform:translateX(-10px)}100%{transform:translateX(10px)}}
+@keyframes wheelSpin{to{transform:rotate(360deg)}}
+@keyframes dustPuff{0%{opacity:.8;transform:scale(0.5)}100%{opacity:0;transform:scale(2)}}
+.sheet{animation:slideUp .3s cubic-bezier(.32,.72,0,1)}
+.overlay{position:absolute;left:0;right:0;bottom:0;z-index:400;background:rgba(255,255,255,0.98);backdrop-filter:blur(24px);border-radius:24px 24px 0 0;padding:20px 20px 40px;border-top:1px solid rgba(0,0,0,0.06);max-height:92dvh;overflow-y:auto;box-shadow:0 -8px 40px rgba(0,0,0,0.12)}
+.pill{width:38px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px}
+.input{width:100%;padding:13px 16px;border-radius:12px;background:#f8fafc;border:1.5px solid #e2e8f0;color:#1e293b;font-size:14px;font-family:'Nunito',sans-serif;outline:none;transition:border .2s}
+.input:focus{border-color:#22c55e}
+.input::placeholder{color:#94a3b8}
+.navbar{position:absolute;bottom:0;left:0;right:0;z-index:300;background:rgba(255,255,255,0.97);backdrop-filter:blur(20px);border-top:1px solid rgba(0,0,0,0.08);display:flex;flex-direction:row;padding:10px 0 24px;box-shadow:0 -2px 16px rgba(0,0,0,0.06)}
+/* Mapbox */
+.mapboxgl-ctrl-bottom-right{bottom:85px!important;right:12px!important}
+.mapboxgl-ctrl-group{background:rgba(255,255,255,0.95)!important;border:1px solid rgba(0,0,0,0.1)!important;border-radius:12px!important;overflow:hidden!important;box-shadow:0 2px 12px rgba(0,0,0,0.1)!important}
+.mapboxgl-ctrl-group button{background:transparent!important;border:none!important}
+.mapboxgl-ctrl-group button .mapboxgl-ctrl-icon{filter:none!important;opacity:.7}
+.mapboxgl-ctrl-attrib,.mapboxgl-ctrl-logo{display:none!important}
+#rankScreen{position:absolute;inset:0;z-index:500;background:#f1f5f9;display:none;flex-direction:column}
+#rankScreen.on{display:flex}
+#authScreen{position:absolute;inset:0;z-index:600;background:#f1f5f9;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px}
+</style>
+</head>
+<body>
+<div id="app">
 
-  if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  <div id="map"></div>
 
-  let body = req.body;
-  if (typeof body === "string") {
-    try { body = JSON.parse(body); } catch { return res.status(400).json({ error: "JSON inválido" }); }
+  <!-- LOADING -->
+  <div id="loading" style="position:absolute;inset:0;background:#f1f5f9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:999">
+    <div style="font-weight:900;font-size:52px;color:#16a34a;letter-spacing:-2px;filter:drop-shadow(0 2px 8px rgba(22,163,74,.3))">LIF</div>
+    <div style="font-size:11px;color:#94a3b8;font-weight:700;letter-spacing:2.5px">POR UN PAÍS LIMPIO</div>
+    <div style="font-size:12px;color:#94a3b8;margin-top:4px" id="loadMsg">Iniciando...</div>
+    <div style="width:36px;height:36px;border:3px solid rgba(22,163,74,0.2);border-top:3px solid #16a34a;border-radius:50%;animation:spin .8s linear infinite;margin-top:4px"></div>
+  </div>
+
+  <div id="authScreen" style="display:none">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-weight:900;font-size:48px;color:#16a34a;letter-spacing:-2px;filter:drop-shadow(0 2px 8px rgba(22,163,74,.25))">LIF</div>
+      <div style="font-size:11px;color:#94a3b8;font-weight:700;letter-spacing:2.5px;margin-top:4px">POR UN PAÍS LIMPIO</div>
+    </div>
+
+    <!-- Login -->
+    <div id="viewLogin" style="width:100%;max-width:340px">
+      <div style="font-size:18px;font-weight:800;color:#1e293b;margin-bottom:6px">Iniciar sesión</div>
+      <div style="font-size:13px;color:#94a3b8;margin-bottom:24px">Para reportar necesitas una cuenta</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <input class="input" id="loginEmail" type="email" placeholder="Correo electrónico" autocomplete="email"/>
+        <input class="input" id="loginPass" type="password" placeholder="Contraseña" autocomplete="current-password"/>
+        <div id="loginError" style="display:none;font-size:12px;color:#dc2626;padding:10px 14px;background:#fef2f2;border-radius:10px;border:1px solid #fecaca"></div>
+        <button class="btn" onclick="doLogin()" id="btnLogin" style="padding:14px;border-radius:12px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:15px;font-weight:800;box-shadow:0 4px 16px rgba(34,197,94,.3)">Ingresar</button>
+        <button class="btn" onclick="showRegister()" style="padding:12px;border-radius:12px;background:#f1f5f9;color:#64748b;font-size:14px;font-weight:600;border:1.5px solid #e2e8f0">¿No tienes cuenta? Regístrate</button>
+      </div>
+    </div>
+
+    <!-- Register -->
+    <div id="viewRegister" style="display:none;width:100%;max-width:340px">
+      <div style="font-size:18px;font-weight:800;color:#1e293b;margin-bottom:6px">Crear cuenta</div>
+      <div style="font-size:13px;color:#94a3b8;margin-bottom:24px">Únete y ayuda a limpiar Chile</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <input class="input" id="regNombre" type="text" placeholder="Nombre completo"/>
+        <input class="input" id="regEmail" type="email" placeholder="Correo electrónico" autocomplete="email"/>
+        <input class="input" id="regPass" type="password" placeholder="Contraseña (mín. 6 caracteres)" autocomplete="new-password"/>
+        <div id="regError" style="display:none;font-size:12px;color:#dc2626;padding:10px 14px;background:#fef2f2;border-radius:10px;border:1px solid #fecaca"></div>
+        <div id="regSuccess" style="display:none;font-size:12px;color:#16a34a;padding:10px 14px;background:#f0fdf4;border-radius:10px;border:1px solid #bbf7d0"></div>
+        <button class="btn" onclick="doRegister()" style="padding:14px;border-radius:12px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:15px;font-weight:800;box-shadow:0 4px 16px rgba(34,197,94,.3)">Crear cuenta</button>
+        <button class="btn" onclick="showLogin()" style="padding:12px;border-radius:12px;background:#f1f5f9;color:#64748b;font-size:14px;font-weight:600;border:1.5px solid #e2e8f0">¿Ya tienes cuenta? Inicia sesión</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GPS DENIED -->
+  <div id="gpsDenied" style="display:none;position:absolute;inset:0;background:#f1f5f9;z-index:998;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;gap:16px">
+    <div style="font-size:52px">📍</div>
+    <div style="font-size:20px;font-weight:900;color:#1e293b">Ubicación requerida</div>
+    <div style="font-size:14px;color:#64748b;line-height:1.7">LIF necesita tu ubicación GPS para reportar puntos críticos exactamente donde estás.</div>
+    <button class="btn" onclick="pedirGPS()" style="padding:14px 32px;border-radius:14px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:15px;font-weight:800;box-shadow:0 4px 16px rgba(34,197,94,.3);margin-top:8px">Permitir ubicación</button>
+  </div>
+
+  <!-- HEADER -->
+  <div id="header" style="display:none;position:absolute;top:0;left:0;right:0;z-index:200;padding:12px 16px;background:linear-gradient(to bottom,rgba(241,245,249,0.95),transparent);pointer-events:none">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="background:rgba(255,255,255,0.95);backdrop-filter:blur(16px);border-radius:14px;padding:8px 16px;border:1px solid rgba(0,0,0,0.08);box-shadow:0 2px 12px rgba(0,0,0,0.08);pointer-events:auto">
+        <div style="font-weight:900;font-size:22px;color:#16a34a;line-height:1;letter-spacing:-1px">LIF</div>
+        <div style="font-size:8px;color:#94a3b8;font-weight:700;letter-spacing:2px;margin-top:1px">POR UN PAÍS LIMPIO</div>
+      </div>
+      <div style="display:flex;gap:8px;pointer-events:auto">
+        <div style="background:rgba(255,255,255,0.95);backdrop-filter:blur(16px);border-radius:12px;padding:8px 12px;border:1px solid rgba(0,0,0,0.08);box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;align-items:center;gap:6px">
+          <div style="width:7px;height:7px;border-radius:50%;background:#22c55e;animation:pulse 1.5s infinite"></div>
+          <span id="pinCount" style="font-size:12px;color:#64748b;font-weight:700">0 reportes</span>
+        </div>
+        <button class="btn" onclick="doLogout()" style="background:rgba(255,255,255,0.95);backdrop-filter:blur(16px);border-radius:12px;padding:8px 12px;border:1px solid rgba(0,0,0,0.08);box-shadow:0 2px 8px rgba(0,0,0,0.06);color:#64748b;font-size:12px;font-weight:700">Salir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BTN REPORTAR -->
+  <div id="reportBtn" style="display:none;position:absolute;bottom:90px;left:50%;transform:translateX(-50%);z-index:200;flex-direction:column;align-items:center;gap:6px">
+    <button class="btn" onclick="iniciarReporte()" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#16a34a);border:4px solid rgba(255,255,255,0.25);box-shadow:0 4px 28px rgba(34,197,94,.65),0 0 0 10px rgba(34,197,94,.12);font-size:30px">📍</button>
+    <div style="background:rgba(5,10,20,0.92);backdrop-filter:blur(8px);border-radius:8px;padding:4px 12px;font-size:11px;font-weight:800;color:#22c55e;letter-spacing:.5px">REPORTAR</div>
+  </div>
+
+  <!-- PIN POPUP -->
+  <div id="pinPopup" style="display:none;position:absolute;bottom:90px;left:14px;right:14px;z-index:200">
+    <div id="pinInner" style="background:rgba(255,255,255,0.98);backdrop-filter:blur(18px);border-radius:20px;padding:16px;box-shadow:0 8px 32px rgba(0,0,0,0.15)"></div>
+  </div>
+
+  <!-- SHEET REPORTE -->
+  <div id="sheetReporte" style="display:none" class="overlay sheet">
+    <div class="pill"></div>
+    <div style="font-size:16px;font-weight:800;color:#1e293b;margin-bottom:3px">Nuevo reporte</div>
+    <div style="font-size:12px;color:#94a3b8;margin-bottom:18px">📍 <span id="gpsLabel">Usando tu ubicación actual</span></div>
+
+    <div style="margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700;color:#64748b;margin-bottom:8px">1. Foto del punto crítico <span style="color:#ef4444">*</span></div>
+      <input type="file" id="fotoInput" accept="image/*" capture="environment" style="display:none" onchange="onFotoSelected(this)"/>
+      <div id="fotoBox" onclick="document.getElementById('fotoInput').click()" style="height:150px;border:2px dashed #e2e8f0;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;overflow:hidden;position:relative;background:#f8fafc">
+        <span style="font-size:34px">📷</span>
+        <span style="font-size:13px;font-weight:700;color:#64748b">Toca para sacar foto</span>
+        <span style="font-size:11px;color:#94a3b8">La IA verificará que sea basura real</span>
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700;color:#64748b;margin-bottom:8px">2. Tipo de basura <span style="color:#ef4444">*</span></div>
+      <div id="tipoList" style="display:flex;flex-direction:column;gap:7px"></div>
+    </div>
+
+    <div id="aiBox" style="display:none;padding:13px 15px;border-radius:13px;margin-bottom:14px;font-size:13px;font-weight:600;line-height:1.5"></div>
+
+    <div id="uploadProgress" style="display:none;padding:12px;border-radius:12px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);margin-bottom:14px;font-size:13px;color:#93c5fd;font-weight:600;text-align:center"></div>
+
+    <div style="display:flex;gap:10px">
+      <button class="btn" onclick="cancelarReporte()" style="flex:1;padding:13px;border-radius:12px;background:rgba(255,255,255,0.06);color:#64748b;font-size:14px;font-weight:600">Cancelar</button>
+      <button class="btn" id="btnPublicar" onclick="publicarPin()" disabled style="flex:2;padding:13px;border-radius:12px;background:rgba(255,255,255,0.06);color:#475569;font-size:14px;font-weight:800;cursor:not-allowed">🚀 Publicar</button>
+    </div>
+  </div>
+
+  <!-- NAVBAR -->
+  <div id="navbar" style="display:none;position:absolute;bottom:0;left:0;right:0;z-index:300;background:rgba(255,255,255,0.97);backdrop-filter:blur(20px);border-top:1px solid rgba(0,0,0,0.08);flex-direction:row;padding:10px 0 24px;box-shadow:0 -2px 16px rgba(0,0,0,0.06)">
+    <button id="navMapa" onclick="setVista('mapa')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;font-family:'Nunito',sans-serif;cursor:pointer;color:#1e293b;padding:4px 0;opacity:1">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+      <span style="font-size:10px;font-weight:700;letter-spacing:.5px">MAPA</span>
+    </button>
+    <button id="navRank" onclick="setVista('ranking')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;font-family:'Nunito',sans-serif;cursor:pointer;color:#1e293b;padding:4px 0;opacity:.3">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span style="font-size:10px;font-weight:700;letter-spacing:.5px">RANKING</span>
+    </button>
+  </div>
+
+  <!-- RANKING -->
+  <div id="rankScreen">
+    <div style="padding:16px 18px 12px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-weight:900;font-size:22px;color:#16a34a;letter-spacing:-1px">LIF</span>
+        <span style="font-size:10px;color:#94a3b8;font-weight:700;letter-spacing:1.5px">POR UN PAÍS LIMPIO</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;padding:10px 16px;background:#fff;border-bottom:1px solid #f1f5f9;flex-shrink:0">
+      <button class="btn rfBtn active" onclick="setRankFiltro('todos',this)" style="padding:7px 14px;border-radius:20px;font-size:12px;font-weight:700;background:#16a34a;color:#fff;border:none">🌐 Todos</button>
+      <button class="btn rfBtn" onclick="setRankFiltro('comuna',this)" style="padding:7px 14px;border-radius:20px;font-size:12px;font-weight:700;background:#f1f5f9;color:#64748b;border:none">🏘️ Comunas</button>
+      <button class="btn rfBtn" onclick="setRankFiltro('autopista',this)" style="padding:7px 14px;border-radius:20px;font-size:12px;font-weight:700;background:#f1f5f9;color:#64748b;border:none">🛣️ Autopistas</button>
+    </div>
+    <div id="rankList" style="flex:1;overflow-y:auto;padding:12px 16px 100px;background:#f1f5f9">
+      <div style="text-align:center;color:#94a3b8;padding:60px 20px">
+        <div style="font-size:40px;margin-bottom:12px">🏆</div>
+        <div style="font-weight:700;color:#64748b">Aún no hay reportes</div>
+        <div style="margin-top:6px;font-size:12px">Sé el primero en reportar</div>
+      </div>
+    </div>
+    <div style="position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,0.97);backdrop-filter:blur(20px);border-top:1px solid rgba(0,0,0,0.08);display:flex;flex-direction:row;padding:10px 0 24px;z-index:300;box-shadow:0 -2px 16px rgba(0,0,0,0.06)">
+      <button onclick="setVista('mapa')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;font-family:'Nunito',sans-serif;cursor:pointer;color:#1e293b;padding:4px 0;opacity:.3">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+        <span style="font-size:10px;font-weight:700;letter-spacing:.5px">MAPA</span>
+      </button>
+      <button onclick="setVista('ranking')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;font-family:'Nunito',sans-serif;cursor:pointer;color:#1e293b;padding:4px 0;opacity:1">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <span style="font-size:10px;font-weight:700;letter-spacing:.5px">RANKING</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- NOTIF -->
+  <div id="notif" style="display:none;position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#fff;border:1px solid #bbf7d0;color:#16a34a;padding:11px 22px;border-radius:14px;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.12);white-space:nowrap;animation:fadeIn .2s ease"></div>
+
+</div>
+
+<script>
+// ── CONFIG ──
+const MAPBOX_TOKEN = "pk.eyJ1IjoiYm9yamE5MDgiLCJhIjoiY21ua2ZjeWxiMG82MDJwcHYyZGdxbGY0eSJ9.feVF5TXANdeweXWMH3NAcA";
+const SUPABASE_URL = "https://ebfyluscbldfrstreimu.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViZnlsdXNjYmxkZnJzdHJlaW11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MjM4MDEsImV4cCI6MjA5MDk5OTgwMX0.fsMb0H0AD1ldyyAD04Yb07RQdPugsaa9GZRleDCDoJc";
+
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const TIPOS = {
+  "Microbasural":           { color:"#f59e0b", emoji:"🗑️", pts:-5  },
+  "Escombros":              { color:"#f97316", emoji:"🧱", pts:-15 },
+  "Residuos domiciliarios": { color:"#ef4444", emoji:"🛢️", pts:-10 },
+  "Residuos peligrosos":    { color:"#dc2626", emoji:"☠️", pts:-25 },
+  "Basura en autopista":    { color:"#b91c1c", emoji:"🛣️", pts:-20 },
+};
+
+// ── STATE ──
+let map, userLat, userLng, userMarker, truckMarker, currentUser;
+let lastHeading = 0;
+let tipoSel="", fotoFile=null, fotoB64="", aiOk=false;
+let rankFiltro="todos", vista="mapa";
+let notifTimer, pendingMarker=null;
+
+// ── INIT ──
+window.onload = async () => {
+  setText("loadMsg", "Verificando sesión...");
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    setText("loadMsg", "Solicitando GPS...");
+    pedirGPS();
+  } else {
+    hide("loading");
+    showEl("authScreen","flex");
   }
 
-  const { imagen, tipo } = body || {};
-  if (!imagen) return res.status(400).json({ error: "Falta imagen" });
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === "SIGNED_IN" && session) {
+      currentUser = session.user;
+      hide("authScreen");
+      showEl("loading","flex");
+      setText("loadMsg","Solicitando GPS...");
+      pedirGPS();
+    }
+    if (event === "SIGNED_OUT") {
+      currentUser = null;
+      hide("header"); hide("navbar"); hide("reportBtn");
+      showEl("authScreen","flex");
+    }
+  });
+};
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: "API key no configurada en Vercel" });
+// ── AUTH ──
+function showLogin()    { show("viewLogin"); hide("viewRegister"); }
+function showRegister() { hide("viewLogin"); show("viewRegister"); }
+
+async function doLogin() {
+  const email = val("loginEmail");
+  const pass  = val("loginPass");
+  if (!email||!pass) { showError("loginError","Completa todos los campos"); return; }
+  hide("loginError");
+  setBtnText("btnLogin","Ingresando...");
+  const { error } = await sb.auth.signInWithPassword({ email, password:pass });
+  setBtnText("btnLogin","Ingresar");
+  if (error) showError("loginError", tradError(error.message));
+}
+
+async function doRegister() {
+  const nombre = val("regNombre");
+  const email  = val("regEmail");
+  const pass   = val("regPass");
+  if (!nombre||!email||!pass) { showError("regError","Completa todos los campos"); return; }
+  if (pass.length < 6)        { showError("regError","La contraseña debe tener al menos 6 caracteres"); return; }
+  hide("regError");
+  const { error } = await sb.auth.signUp({ email, password:pass, options:{ data:{ nombre } } });
+  if (error) { showError("regError", tradError(error.message)); return; }
+  hide("regError");
+  showEl("regSuccess","block");
+  document.getElementById("regSuccess").textContent = "✅ Cuenta creada. Revisa tu correo para confirmar.";
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+}
+
+function tradError(msg) {
+  if (msg.includes("Invalid login")) return "Correo o contraseña incorrectos";
+  if (msg.includes("already registered")) return "Este correo ya tiene cuenta";
+  if (msg.includes("valid email")) return "Ingresa un correo válido";
+  return msg;
+}
+
+// ── GPS ──
+function pedirGPS() {
+  if (!navigator.geolocation) { mostrarGPSDenied(); return; }
+  navigator.geolocation.getCurrentPosition(onGPS, mostrarGPSDenied, { enableHighAccuracy:true, timeout:15000 });
+}
+
+function onGPS(pos) {
+  userLat = pos.coords.latitude;
+  userLng = pos.coords.longitude;
+  setText("loadMsg","Cargando mapa...");
+  initMap();
+}
+
+function mostrarGPSDenied() { hide("loading"); showEl("gpsDenied","flex"); }
+
+// ── MAP ──
+function rotateTruck(heading) {
+  if (!truckMarker) return;
+  const h = heading || lastHeading;
+  lastHeading = h;
+  const el = truckMarker.getElement();
+  if (el) el.style.transform = `rotate(${h}deg)`;
+}
+
+function initMap() {
+  mapboxgl.accessToken = MAPBOX_TOKEN;
+  map = new mapboxgl.Map({
+    container:"map", style:"mapbox://styles/mapbox/streets-v12",
+    center:[userLng, userLat], zoom:15, attributionControl:false
+  });
+  map.addControl(new mapboxgl.NavigationControl({showCompass:false}), "bottom-right");
+  map.on("load", onMapLoad);
+}
+
+async function onMapLoad() {
+  // Punto azul usuario
+  const el = document.createElement("div");
+  el.style.cssText="width:18px;height:18px;border-radius:50%;background:#3b82f6;border:3px solid #fff;box-shadow:0 0 0 6px rgba(59,130,246,0.25)";
+  userMarker = new mapboxgl.Marker({element:el,anchor:"center"}).setLngLat([userLng,userLat]).addTo(map);
+
+  // 🚛 Camión de basura animado (el usuario)
+  const truck = document.createElement("div");
+  truck.id = "truckMarker";
+  truck.innerHTML = `
+    <div style="position:relative;animation:truckBounce 0.6s ease-in-out infinite;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.25))">
+      <svg width="52" height="38" viewBox="0 0 52 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Cuerpo principal -->
+        <rect x="2" y="8" width="34" height="20" rx="3" fill="#16a34a"/>
+        <!-- Cabina -->
+        <rect x="36" y="12" width="14" height="16" rx="3" fill="#15803d"/>
+        <!-- Ventana cabina -->
+        <rect x="38" y="14" width="9" height="8" rx="2" fill="#bfdbfe"/>
+        <!-- Techo cabina -->
+        <rect x="37" y="10" width="13" height="4" rx="2" fill="#166534"/>
+        <!-- Línea separadora -->
+        <rect x="34" y="10" width="3" height="18" rx="1" fill="#166534"/>
+        <!-- Letrero LIF -->
+        <rect x="6" y="12" width="22" height="10" rx="2" fill="#dcfce7"/>
+        <text x="17" y="20" text-anchor="middle" font-size="7" font-weight="900" fill="#16a34a" font-family="Nunito,sans-serif">LIF</text>
+        <!-- Ruedas -->
+        <circle cx="12" cy="30" r="6" fill="#1e293b"/>
+        <circle cx="12" cy="30" r="3" fill="#64748b"/>
+        <circle cx="38" cy="30" r="6" fill="#1e293b"/>
+        <circle cx="38" cy="30" r="3" fill="#64748b"/>
+        <!-- Faro -->
+        <rect x="48" y="18" width="4" height="5" rx="1" fill="#fde047"/>
+      </svg>
+      <!-- Polvo animado -->
+      <div style="position:absolute;left:-8px;bottom:2px;width:10px;height:10px;border-radius:50%;background:rgba(100,116,139,0.3);animation:dustPuff 0.8s ease-out infinite"></div>
+    </div>`;
+  truck.style.cssText = "background:none;border:none;cursor:default";
+  truckMarker = new mapboxgl.Marker({element:truck, anchor:"bottom"})
+    .setLngLat([userLng, userLat])
+    .addTo(map);
+
+  // Seguir ubicación — mueve AMBOS marcadores
+  navigator.geolocation.watchPosition(pos=>{
+    userLat=pos.coords.latitude; userLng=pos.coords.longitude;
+    userMarker.setLngLat([userLng,userLat]);
+    truckMarker.setLngLat([userLng,userLat]);
+    // Rotar camión según dirección
+    rotateTruck(pos.coords.heading);
+  },null,{enableHighAccuracy:true});
+
+  hide("loading");
+  showEl("header","block"); showEl("reportBtn","flex"); showEl("navbar","flex");
+  buildTipoList();
+  await cargarPins();
+}
+
+// ── CARGAR PINS DESDE SUPABASE ──
+async function cargarPins() {
+  const { data, error } = await sb.from("reportes").select("*").order("created_at", {ascending:false});
+  if (error) { console.error(error); return; }
+  data.forEach(p => agregarMarker(p));
+  setText("pinCount", `${data.length} reporte${data.length!==1?"s":""}`);
+  actualizarRanking(data);
+}
+
+// ── TIPOS ──
+function buildTipoList() {
+  document.getElementById("tipoList").innerHTML = Object.entries(TIPOS).map(([t,c])=>`
+    <button class="btn" onclick="selTipo('${t}',this)" style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-radius:13px;background:#f8fafc;border:1.5px solid #e2e8f0;width:100%">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:34px;height:34px;border-radius:9px;background:${c.color}18;display:flex;align-items:center;justify-content:center;font-size:17px">${c.emoji}</div>
+        <span style="font-size:14px;font-weight:700;color:#1e293b">${t}</span>
+      </div>
+      <span style="font-size:13px;font-weight:800;color:${c.color}">${c.pts} pts</span>
+    </button>`).join("");
+}
+
+function selTipo(t, btn) {
+  tipoSel = t;
+  document.querySelectorAll("#tipoList .btn").forEach(b=>{ b.style.background="rgba(255,255,255,0.05)"; b.style.border="1px solid rgba(255,255,255,0.07)"; });
+  btn.style.background=`${TIPOS[t].color}18`; btn.style.border=`1px solid ${TIPOS[t].color}55`;
+  checkPublicar();
+}
+
+// ── FOTO + IA ──
+function onFotoSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  fotoFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    fotoB64 = e.target.result.split(",")[1];
+    document.getElementById("fotoBox").innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:14px"/>
+      <div style="position:absolute;bottom:8px;right:8px;background:rgba(5,10,20,0.85);border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;color:#22c55e">✓ Foto lista</div>`;
+    analizarConIA();
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analizarConIA() {
+  const box = document.getElementById("aiBox");
+  box.style.cssText="display:block;padding:13px 15px;border-radius:13px;margin-bottom:14px;font-size:13px;font-weight:600;line-height:1.5;background:#eff6ff;border:1px solid #bfdbfe;color:#3b82f6";
+  box.innerHTML=`<div style="display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border:2px solid #bfdbfe;border-top:2px solid #3b82f6;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0"></div>Verificando con IA que sea basura real...</div>`;
+  aiOk=false; checkPublicar();
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await fetch("/api/verificar", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01"
-      },
-      body: JSON.stringify({
-        model: "claude-opus-4-5",
-        max_tokens: 400,
-        messages: [{
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: { type: "base64", media_type: "image/jpeg", data: imagen }
-            },
-            {
-              type: "text",
-              text: `Eres el verificador oficial de LIF, app chilena de reporte de basura ciudadana.
-
-Analiza esta foto y responde SOLO con JSON válido, sin markdown:
-
-{
-  "aprobado": true o false,
-  "descripcion": "descripción breve en 1 frase",
-  "severidad": "Leve | Moderada | Grave | Muy Grave",
-  "motivo_rechazo": "razón si fue rechazada, vacío si aprobada"
-}
-
-Reglas:
-- aprobado TRUE: foto muestra claramente basura, residuos o escombros en espacio público
-- aprobado FALSE: foto borrosa, sin basura visible, selfie, pantalla, o irrelevante
-- Tipo reportado: "${tipo || 'basura general'}"
-- Si hay duda, rechaza`
-            }
-          ]
-        }]
-      })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imagen: fotoB64, tipo: tipoSel })
     });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("Anthropic error:", response.status, errText);
-      return res.status(502).json({ error: "Error al contactar IA", detalle: errText });
+    if (!res.ok) throw new Error("Error servidor");
+    const json = await res.json();
+
+    if (json.aprobado) {
+      aiOk = true;
+      box.style.cssText="display:block;padding:13px 15px;border-radius:13px;margin-bottom:14px;font-size:13px;font-weight:600;line-height:1.5;background:#f0fdf4;border:1px solid #bbf7d0;color:#16a34a";
+      box.innerHTML=`✅ <strong>Verificado:</strong> ${json.descripcion} · <strong>${json.severidad}</strong>`;
+    } else {
+      aiOk = false;
+      box.style.cssText="display:block;padding:13px 15px;border-radius:13px;margin-bottom:14px;font-size:13px;font-weight:600;line-height:1.5;background:#fef2f2;border:1px solid #fecaca;color:#dc2626";
+      box.innerHTML=`❌ <strong>Foto rechazada:</strong> ${json.motivo_rechazo || "No se detectó basura real"}. Saca una foto más clara del punto crítico.`;
     }
-
-    const data = await response.json();
-    const text = data.content?.[0]?.text || "{}";
-
-    let resultado;
-    try {
-      resultado = JSON.parse(text.replace(/```json|```/g, "").trim());
-    } catch {
-      return res.status(500).json({ error: "Respuesta IA inválida", raw: text });
-    }
-
-    return res.status(200).json(resultado);
-
-  } catch (err) {
-    console.error("Error interno:", err.message);
-    return res.status(500).json({ error: "Error interno", mensaje: err.message });
+  } catch(e) {
+    // Si falla la función, bloqueamos el reporte
+    aiOk = false;
+    box.style.cssText="display:block;padding:13px 15px;border-radius:13px;margin-bottom:14px;font-size:13px;font-weight:600;line-height:1.5;background:#fefce8;border:1px solid #fef08a;color:#ca8a04";
+    box.innerHTML=`⚠️ No se pudo verificar la foto. Revisa tu conexión e intenta de nuevo.`;
   }
+  checkPublicar();
 }
+
+function checkPublicar() {
+  const btn = document.getElementById("btnPublicar");
+  const ok = tipoSel && fotoB64 && aiOk;
+  btn.disabled=!ok;
+  btn.style.background=ok?"linear-gradient(135deg,#22c55e,#16a34a)":"rgba(255,255,255,0.06)";
+  btn.style.color=ok?"#fff":"#475569";
+  btn.style.cursor=ok?"pointer":"not-allowed";
+  btn.style.boxShadow=ok?"0 4px 16px rgba(34,197,94,.4)":"none";
+}
+
+// ── REPORTE ──
+function iniciarReporte() {
+  hide("pinPopup"); showEl("sheetReporte","block");
+  tipoSel=""; fotoFile=null; fotoB64=""; aiOk=false;
+  document.getElementById("fotoInput").value="";
+  document.getElementById("fotoBox").innerHTML=`<span style="font-size:34px">📷</span><span style="font-size:13px;font-weight:700;color:#64748b">Toca para sacar foto</span><span style="font-size:11px;color:#334155">La IA verificará que sea basura real</span>`;
+  hide("aiBox"); hide("uploadProgress");
+  buildTipoList(); checkPublicar();
+  setText("gpsLabel",`${userLat.toFixed(5)}, ${userLng.toFixed(5)}`);
+}
+
+function cancelarReporte() { hide("sheetReporte"); }
+
+async function publicarPin() {
+  if (!tipoSel||!fotoB64||!aiOk) return;
+  const btn = document.getElementById("btnPublicar");
+  btn.disabled=true; btn.textContent="Subiendo...";
+  const prog = document.getElementById("uploadProgress");
+  prog.style.display="block"; prog.textContent="📤 Subiendo foto...";
+
+  let foto_url = null;
+  try {
+    // Subir foto a Supabase Storage
+    const ext = fotoFile.name.split(".").pop() || "jpg";
+    const path = `${currentUser.id}/${Date.now()}.${ext}`;
+    const { error: upErr } = await sb.storage.from("fotos-reportes").upload(path, fotoFile, {contentType: fotoFile.type});
+    if (!upErr) {
+      const { data: urlData } = sb.storage.from("fotos-reportes").getPublicUrl(path);
+      foto_url = urlData.publicUrl;
+    }
+  } catch(e) { console.warn("Error subiendo foto:",e); }
+
+  prog.textContent="💾 Guardando reporte...";
+
+  const comuna = detectarComuna(userLat, userLng);
+  const cfg = TIPOS[tipoSel];
+  const { data, error } = await sb.from("reportes").insert({
+    user_id: currentUser.id,
+    user_email: currentUser.email,
+    lat: userLat, lng: userLng,
+    tipo: tipoSel, comuna,
+    pts: cfg.pts,
+    verificaciones: 1,
+    foto_url
+  }).select().single();
+
+  if (error) {
+    prog.style.display="none";
+    notify("❌ Error al guardar. Intenta de nuevo."); 
+    btn.disabled=false; btn.textContent="🚀 Publicar";
+    return;
+  }
+
+  agregarMarker(data);
+  const total = document.querySelectorAll(".lif-marker").length;
+  setText("pinCount",`${total} reporte${total!==1?"s":""}`);
+  await actualizarRankingDesdeDB();
+  hide("sheetReporte"); hide("uploadProgress");
+  notify(`📍 Reporte publicado en ${comuna} · ${cfg.pts} pts`);
+}
+
+// ── MARKERS ──
+function makePinHTML(tipo, ver, estado) {
+  const c = TIPOS[tipo]||TIPOS["Microbasural"];
+  const limpio = estado === "limpio";
+  const color = limpio ? "#94a3b8" : c.color;
+  const emoji = limpio ? "✅" : c.emoji;
+  return `<div style="position:relative;display:inline-block;filter:drop-shadow(0 3px 6px ${color}88);opacity:${limpio?0.55:1}">
+    <div style="width:38px;height:38px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${color};display:flex;align-items:center;justify-content:center;border:2.5px solid rgba(255,255,255,0.85)">
+      <span style="transform:rotate(45deg);font-size:16px;line-height:1">${emoji}</span>
+    </div>
+    <div style="width:6px;height:3px;background:rgba(0,0,0,0.2);border-radius:50%;margin:1px auto 0;filter:blur(1.5px)"></div>
+    ${ver>1?`<div style="position:absolute;top:-5px;right:-10px;background:#fff;color:#111;border-radius:8px;font-size:9px;font-weight:900;padding:1px 5px;box-shadow:0 1px 4px rgba(0,0,0,0.15)">×${ver}</div>`:""}
+  </div>`;
+}
+
+const markerRefs = {};
+
+function agregarMarker(pin) {
+  if (!map) return;
+  const el = document.createElement("div");
+  el.innerHTML = makePinHTML(pin.tipo, pin.verificaciones||1, pin.estado||"activo");
+  el.style.cssText="background:none;border:none;cursor:pointer";
+  el.addEventListener("click", e=>{ e.stopPropagation(); mostrarPopup(pin); });
+  const m = new mapboxgl.Marker({element:el,anchor:"bottom"}).setLngLat([pin.lng,pin.lat]).addTo(map);
+  markerRefs[pin.id] = { marker:m, pin };
+}
+
+function mostrarPopup(pin) {
+  const cfg = TIPOS[pin.tipo]||TIPOS["Microbasural"];
+  const limpio = pin.estado === "limpio";
+  hide("reportBtn");
+  const d = new Date(pin.created_at);
+  const tiempo = d.toLocaleDateString("es-CL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+  const limpiezasNecesarias = 3;
+  const limpiezasActuales = pin.confirmaciones_limpieza || 0;
+  const barPct = Math.min(100, (limpiezasActuales / limpiezasNecesarias) * 100);
+
+  document.getElementById("pinInner").style.border = limpio ? "1px solid #bbf7d0" : `1px solid ${cfg.color}33`;
+  document.getElementById("pinInner").innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+      <div style="display:flex;gap:10px;align-items:center">
+        <div style="width:42px;height:42px;border-radius:12px;font-size:20px;background:${limpio?"#f0fdf4":`${cfg.color}15`};display:flex;align-items:center;justify-content:center">${limpio?"✅":cfg.emoji}</div>
+        <div>
+          <div style="font-size:15px;font-weight:800;color:#1e293b">${pin.tipo}</div>
+          <div style="font-size:11px;color:#94a3b8">${pin.comuna} · ${tiempo}</div>
+          ${limpio?`<div style="font-size:11px;color:#16a34a;font-weight:700;margin-top:2px">🧹 Reportado como limpio</div>`:""}
+        </div>
+      </div>
+      <button class="btn" onclick="cerrarPopup()" style="background:#f1f5f9;color:#64748b;border-radius:8px;padding:4px 9px;font-size:12px;font-weight:700">✕</button>
+    </div>
+    ${pin.foto_url?`<img src="${pin.foto_url}" style="width:100%;height:110px;object-fit:cover;border-radius:12px;margin-bottom:12px"/>`:""}
+    
+    <div style="display:flex;gap:8px;margin-bottom:${limpio?"0":"12px"}">
+      <div style="flex:1;background:#fef2f2;border-radius:10px;padding:8px;text-align:center;border:1px solid #fecaca">
+        <div style="font-size:17px;font-weight:900;color:#ef4444">${pin.pts}</div>
+        <div style="font-size:10px;color:#94a3b8">pts</div>
+      </div>
+      <div style="flex:1;background:#f1f5f9;border-radius:10px;padding:8px;text-align:center;border:1px solid #e2e8f0">
+        <div style="font-size:17px;font-weight:900;color:#1e293b">×${pin.verificaciones||1}</div>
+        <div style="font-size:10px;color:#94a3b8">vistos</div>
+      </div>
+      <div style="flex:1;background:#f0fdf4;border-radius:10px;padding:8px;text-align:center;border:1px solid #bbf7d0">
+        <div style="font-size:17px;font-weight:900;color:#16a34a">${limpiezasActuales}/${limpiezasNecesarias}</div>
+        <div style="font-size:10px;color:#94a3b8">limpios</div>
+      </div>
+    </div>
+
+    ${!limpio ? `
+    <!-- Barra de progreso limpieza -->
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;margin-bottom:4px">
+        <span>Progreso de limpieza</span>
+        <span>${limpiezasActuales}/${limpiezasNecesarias} confirmaciones</span>
+      </div>
+      <div style="height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${barPct}%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:3px;transition:width .5s ease"></div>
+      </div>
+    </div>
+
+    <!-- Botones acción -->
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="accionPin('${pin.id}','visto')" style="flex:1;background:#eff6ff;border-radius:10px;border:1px solid #bfdbfe;color:#3b82f6;font-size:12px;font-weight:700;padding:10px 6px;text-align:center">
+        👀 También<br><span style="font-size:10px;opacity:.8">lo vi</span>
+      </button>
+      <button class="btn" onclick="accionPin('${pin.id}','limpio')" style="flex:1;background:#f0fdf4;border-radius:10px;border:1px solid #bbf7d0;color:#16a34a;font-size:12px;font-weight:700;padding:10px 6px;text-align:center">
+        🧹 Ya está<br><span style="font-size:10px;opacity:.8">limpio</span>
+      </button>
+    </div>` : `
+    <div style="background:#f0fdf4;border-radius:12px;padding:12px;text-align:center;border:1px solid #bbf7d0">
+      <div style="font-size:13px;font-weight:700;color:#16a34a">✅ Este punto fue limpiado</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:3px">Gracias a la comunidad LIF</div>
+    </div>`}`;
+  showEl("pinPopup","block");
+}
+
+function cerrarPopup() { hide("pinPopup"); showEl("reportBtn","flex"); }
+
+async function accionPin(id, tipo) {
+  if (!currentUser) { notify("Debes iniciar sesión"); return; }
+
+  // Evitar doble voto
+  const { data: yaVoto } = await sb.from("confirmaciones")
+    .select("id").eq("reporte_id", id).eq("user_id", currentUser.id).eq("tipo", tipo).single();
+  if (yaVoto) { notify("Ya confirmaste esto antes 👍"); return; }
+
+  // Registrar confirmación
+  await sb.from("confirmaciones").insert({ reporte_id:id, user_id:currentUser.id, tipo });
+
+  if (tipo === "visto") {
+    // Sumar verificación
+    const ref = markerRefs[id];
+    const vActual = (ref?.pin?.verificaciones || 1) + 1;
+    await sb.from("reportes").update({ verificaciones: vActual }).eq("id", id);
+    if (ref) ref.pin.verificaciones = vActual;
+    notify("👀 ¡Gracias! Basura confirmada");
+
+  } else if (tipo === "limpio") {
+    // Sumar confirmación de limpieza
+    const ref = markerRefs[id];
+    const lActual = (ref?.pin?.confirmaciones_limpieza || 0) + 1;
+    const nuevoEstado = lActual >= 3 ? "limpio" : "activo";
+    await sb.from("reportes").update({
+      confirmaciones_limpieza: lActual,
+      estado: nuevoEstado
+    }).eq("id", id);
+
+    if (ref) {
+      ref.pin.confirmaciones_limpieza = lActual;
+      ref.pin.estado = nuevoEstado;
+      // Actualizar visual del marker
+      ref.marker.getElement().innerHTML = makePinHTML(ref.pin.tipo, ref.pin.verificaciones||1, nuevoEstado);
+    }
+
+    if (nuevoEstado === "limpio") {
+      notify("🧹 ¡Punto marcado como limpio! La comuna suma puntos positivos");
+      await actualizarRankingDesdeDB();
+    } else {
+      notify(`🧹 Limpieza reportada (${lActual}/3 confirmaciones)`);
+    }
+  }
+  cerrarPopup();
+}
+
+// ── RANKING ──
+function getRankColor(pts) {
+  if (pts>-20) return "#22c55e";
+  if (pts>-50) return "#eab308";
+  if (pts>-100) return "#f97316";
+  return "#ef4444";
+}
+
+async function actualizarRankingDesdeDB() {
+  const { data } = await sb.from("reportes").select("*");
+  if (data) actualizarRanking(data);
+}
+
+function actualizarRanking(pins) {
+  const mapa = {};
+  pins.forEach(p => {
+    if (!mapa[p.comuna]) mapa[p.comuna]={ nombre:p.comuna, tipo:"comuna", pts:0, reportes:0, limpios:0 };
+    if (p.estado === "limpio") {
+      mapa[p.comuna].pts += Math.abs(p.pts) * 0.5; // recupera la mitad al limpiar
+      mapa[p.comuna].limpios++;
+    } else {
+      mapa[p.comuna].pts += p.pts;
+    }
+    mapa[p.comuna].reportes++;
+    if (p.tipo==="Basura en autopista") mapa[p.comuna].tipo="autopista";
+  });
+  renderRanking(Object.values(mapa).sort((a,b)=>a.pts-b.pts));
+}
+
+function setRankFiltro(f, btn) {
+  rankFiltro=f;
+  document.querySelectorAll(".rfBtn").forEach(b=>{ b.style.background="#f1f5f9"; b.style.color="#64748b"; });
+  btn.style.background="#16a34a"; btn.style.color="#fff";
+  actualizarRankingDesdeDB();
+}
+
+function renderRanking(lista) {
+  const filtered = lista.filter(r=>rankFiltro==="todos"?true:r.tipo===rankFiltro);
+  const el = document.getElementById("rankList");
+  if (!filtered.length) {
+    el.innerHTML=`<div style="text-align:center;color:#334155;padding:60px 20px"><div style="font-size:40px;margin-bottom:12px">🏆</div><div style="font-weight:700;color:#475569">Aún no hay reportes</div><div style="margin-top:6px;font-size:12px">Sé el primero en reportar</div></div>`;
+    return;
+  }
+  const top=filtered[0];
+  let html=`<div style="margin:0 0 12px;background:linear-gradient(135deg,#fef2f2,#fff1f1);border:1px solid #fecaca;border-radius:18px;padding:16px">
+    <div style="font-size:10px;color:#ef4444;letter-spacing:2px;font-weight:800;margin-bottom:6px">💀 MÁS SUCIA</div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-size:22px;font-weight:900;color:#1e293b">${top.nombre}</div>
+      <div style="font-size:12px;color:#94a3b8">${top.tipo==="autopista"?"🛣️ Concesionaria":"🏘️ Municipalidad"} · ${top.reportes} reporte${top.reportes!==1?"s":""}</div></div>
+      <div style="text-align:right"><div style="font-size:32px;font-weight:900;color:#ef4444">${top.pts}</div><div style="font-size:10px;color:#94a3b8">pts penalización</div></div>
+    </div>
+  </div>`;
+  filtered.slice(1).forEach((r,i)=>{
+    html+=`<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:8px;border-radius:14px;background:#fff;border:1px solid #e2e8f0;border-left:3px solid ${getRankColor(r.pts)};box-shadow:0 1px 4px rgba(0,0,0,0.04)">
+      <div style="width:28px;height:28px;border-radius:8px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#94a3b8;flex-shrink:0">${i+2}</div>
+      <div style="flex:1"><div style="font-weight:800;font-size:14px;color:#1e293b">${r.nombre}</div><div style="font-size:11px;color:#94a3b8">${r.tipo==="autopista"?"🛣️":"🏘️"} ${r.reportes} reporte${r.reportes!==1?"s":""}</div></div>
+      <div style="font-size:16px;font-weight:900;color:${getRankColor(r.pts)}">${r.pts}</div>
+    </div>`;
+  });
+  el.innerHTML=html;
+}
+
+// ── DETECTAR COMUNA ──
+function detectarComuna(lat, lng) {
+  const comunas=[
+    {nombre:"Lo Barnechea",latMin:-33.32,latMax:-33.37,lngMin:-70.57,lngMax:-70.48},
+    {nombre:"Las Condes",latMin:-33.37,latMax:-33.44,lngMin:-70.60,lngMax:-70.48},
+    {nombre:"Vitacura",latMin:-33.37,latMax:-33.42,lngMin:-70.63,lngMax:-70.58},
+    {nombre:"Providencia",latMin:-33.42,latMax:-33.45,lngMin:-70.63,lngMax:-70.57},
+    {nombre:"Ñuñoa",latMin:-33.44,latMax:-33.48,lngMin:-70.63,lngMax:-70.57},
+    {nombre:"La Reina",latMin:-33.43,latMax:-33.48,lngMin:-70.57,lngMax:-70.50},
+    {nombre:"Peñalolén",latMin:-33.47,latMax:-33.54,lngMin:-70.57,lngMax:-70.48},
+    {nombre:"Macul",latMin:-33.48,latMax:-33.52,lngMin:-70.63,lngMax:-70.57},
+    {nombre:"La Florida",latMin:-33.51,latMax:-33.58,lngMin:-70.62,lngMax:-70.54},
+    {nombre:"La Pintana",latMin:-33.55,latMax:-33.62,lngMin:-70.67,lngMax:-70.60},
+    {nombre:"San Bernardo",latMin:-33.58,latMax:-33.68,lngMin:-70.73,lngMax:-70.60},
+    {nombre:"La Granja",latMin:-33.52,latMax:-33.56,lngMin:-70.66,lngMax:-70.61},
+    {nombre:"El Bosque",latMin:-33.55,latMax:-33.59,lngMin:-70.69,lngMax:-70.64},
+    {nombre:"Pedro Aguirre Cerda",latMin:-33.49,latMax:-33.53,lngMin:-70.70,lngMax:-70.65},
+    {nombre:"San Miguel",latMin:-33.48,latMax:-33.52,lngMin:-70.69,lngMax:-70.64},
+    {nombre:"Lo Espejo",latMin:-33.51,latMax:-33.56,lngMin:-70.73,lngMax:-70.68},
+    {nombre:"Estación Central",latMin:-33.45,latMax:-33.50,lngMin:-70.72,lngMax:-70.67},
+    {nombre:"Pudahuel",latMin:-33.43,latMax:-33.52,lngMin:-70.80,lngMax:-70.71},
+    {nombre:"Maipú",latMin:-33.49,latMax:-33.57,lngMin:-70.80,lngMax:-70.71},
+    {nombre:"Cerrillos",latMin:-33.49,latMax:-33.54,lngMin:-70.74,lngMax:-70.69},
+    {nombre:"Quilicura",latMin:-33.34,latMax:-33.40,lngMin:-70.76,lngMax:-70.68},
+    {nombre:"Huechuraba",latMin:-33.34,latMax:-33.39,lngMin:-70.68,lngMax:-70.61},
+    {nombre:"Recoleta",latMin:-33.39,latMax:-33.43,lngMin:-70.66,lngMax:-70.62},
+    {nombre:"Independencia",latMin:-33.41,latMax:-33.44,lngMin:-70.67,lngMax:-70.64},
+    {nombre:"Conchalí",latMin:-33.37,latMax:-33.41,lngMin:-70.69,lngMax:-70.65},
+    {nombre:"Renca",latMin:-33.39,latMax:-33.43,lngMin:-70.74,lngMax:-70.68},
+    {nombre:"Lo Prado",latMin:-33.43,latMax:-33.47,lngMin:-70.75,lngMax:-70.70},
+    {nombre:"Cerro Navia",latMin:-33.42,latMax:-33.46,lngMin:-70.77,lngMax:-70.73},
+    {nombre:"Quinta Normal",latMin:-33.43,latMax:-33.46,lngMin:-70.71,lngMax:-70.67},
+    {nombre:"Santiago Centro",latMin:-33.43,latMax:-33.47,lngMin:-70.68,lngMax:-70.63},
+  ];
+  for(const c of comunas){
+    if(lat>=c.latMin&&lat<=c.latMax&&lng>=c.lngMin&&lng<=c.lngMax) return c.nombre;
+  }
+  let closest="Santiago",minDist=Infinity;
+  for(const c of comunas){
+    const d=Math.sqrt((lat-(c.latMin+c.latMax)/2)**2+(lng-(c.lngMin+c.lngMax)/2)**2);
+    if(d<minDist){minDist=d;closest=c.nombre;}
+  }
+  return closest;
+}
+
+// ── VISTA ──
+function setVista(v) {
+  vista=v;
+  const rs=document.getElementById("rankScreen");
+  if(v==="ranking"){rs.classList.add("on");actualizarRankingDesdeDB();}
+  else rs.classList.remove("on");
+  document.getElementById("navMapa").style.opacity=v==="mapa"?"1":"0.3";
+  document.getElementById("navRank").style.opacity=v==="ranking"?"1":"0.3";
+}
+
+// ── UTILS ──
+function show(id){document.getElementById(id).style.display="block"}
+function showEl(id,d){document.getElementById(id).style.display=d}
+function hide(id){document.getElementById(id).style.display="none"}
+function setText(id,t){const el=document.getElementById(id);if(el)el.textContent=t}
+function val(id){return document.getElementById(id).value.trim()}
+function showError(id,msg){const el=document.getElementById(id);el.style.display="block";el.textContent=msg}
+function setBtnText(id,t){document.getElementById(id).textContent=t}
+function notify(msg){
+  clearTimeout(notifTimer);
+  const el=document.getElementById("notif");
+  el.textContent=msg; el.style.display="block";
+  notifTimer=setTimeout(()=>el.style.display="none",3500);
+}
+</script>
+</body>
+</html>
