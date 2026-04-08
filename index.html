@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>LIF — Por un País Limpio</title>
+<title>LIF.APP — Por un País Limpio</title>
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
@@ -48,7 +48,18 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
 
   <!-- LOADING -->
   <div id="loading" style="position:absolute;inset:0;background:#f1f5f9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:999">
-    <div style="font-weight:900;font-size:52px;color:#16a34a;letter-spacing:-2px;filter:drop-shadow(0 2px 8px rgba(22,163,74,.3))">LIF</div>
+    <svg width="200" height="72" viewBox="130 5 310 105">
+      <g transform="translate(140, 27)">
+        <circle cx="18" cy="18" r="18" fill="#16a34a"/>
+        <path d="M7 30 L18 66 L29 30 Q18 38 7 30Z" fill="#16a34a"/>
+        <ellipse cx="12" cy="11" rx="6" ry="5" fill="rgba(255,255,255,0.25)" transform="rotate(-20,12,11)"/>
+        <circle cx="18" cy="18" r="8" fill="#f8fafc"/>
+        <circle cx="18" cy="18" r="3.5" fill="#16a34a"/>
+      </g>
+      <text x="176" y="92" font-family="Nunito,sans-serif" font-weight="900" font-size="88" letter-spacing="-4" fill="#16a34a">LIF</text>
+      <circle cx="308" cy="84" r="7" fill="#16a34a"/>
+      <text x="320" y="92" font-family="Nunito,sans-serif" font-weight="800" font-size="36" letter-spacing="0" fill="#94a3b8">APP</text>
+    </svg>
     <div style="font-size:11px;color:#94a3b8;font-weight:700;letter-spacing:2.5px">POR UN PAÍS LIMPIO</div>
     <div style="font-size:12px;color:#94a3b8;margin-top:4px" id="loadMsg">Iniciando...</div>
     <div style="width:36px;height:36px;border:3px solid rgba(22,163,74,0.2);border-top:3px solid #16a34a;border-radius:50%;animation:spin .8s linear infinite;margin-top:4px"></div>
@@ -56,7 +67,18 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
 
   <div id="authScreen" style="display:none">
     <div style="text-align:center;margin-bottom:32px">
-      <div style="font-weight:900;font-size:48px;color:#16a34a;letter-spacing:-2px;filter:drop-shadow(0 2px 8px rgba(22,163,74,.25))">LIF</div>
+      <svg width="200" height="72" viewBox="130 5 310 105">
+      <g transform="translate(140, 27)">
+        <circle cx="18" cy="18" r="18" fill="#16a34a"/>
+        <path d="M7 30 L18 66 L29 30 Q18 38 7 30Z" fill="#16a34a"/>
+        <ellipse cx="12" cy="11" rx="6" ry="5" fill="rgba(255,255,255,0.25)" transform="rotate(-20,12,11)"/>
+        <circle cx="18" cy="18" r="8" fill="#f8fafc"/>
+        <circle cx="18" cy="18" r="3.5" fill="#16a34a"/>
+      </g>
+      <text x="176" y="92" font-family="Nunito,sans-serif" font-weight="900" font-size="88" letter-spacing="-4" fill="#16a34a">LIF</text>
+      <circle cx="308" cy="84" r="7" fill="#16a34a"/>
+      <text x="320" y="92" font-family="Nunito,sans-serif" font-weight="800" font-size="36" letter-spacing="0" fill="#94a3b8">APP</text>
+    </svg>
       <div style="font-size:11px;color:#94a3b8;font-weight:700;letter-spacing:2.5px;margin-top:4px">POR UN PAÍS LIMPIO</div>
     </div>
 
@@ -93,7 +115,7 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
   <div id="gpsDenied" style="display:none;position:absolute;inset:0;background:#f1f5f9;z-index:998;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;gap:16px">
     <div style="font-size:52px">📍</div>
     <div style="font-size:20px;font-weight:900;color:#1e293b">Ubicación requerida</div>
-    <div style="font-size:14px;color:#64748b;line-height:1.7">LIF necesita tu ubicación GPS para reportar puntos críticos exactamente donde estás.</div>
+    <div style="font-size:14px;color:#64748b;line-height:1.7">LIF.APP necesita tu ubicación GPS para reportar puntos críticos exactamente donde estás.</div>
     <button class="btn" onclick="pedirGPS()" style="padding:14px 32px;border-radius:14px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:15px;font-weight:800;box-shadow:0 4px 16px rgba(34,197,94,.3);margin-top:8px">Permitir ubicación</button>
   </div>
 
@@ -101,8 +123,18 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
   <div id="header" style="display:none;position:absolute;top:0;left:0;right:0;z-index:200;padding:12px 16px;background:linear-gradient(to bottom,rgba(241,245,249,0.95),transparent);pointer-events:none">
     <div style="display:flex;align-items:center;justify-content:space-between">
       <div style="background:rgba(255,255,255,0.95);backdrop-filter:blur(16px);border-radius:14px;padding:8px 16px;border:1px solid rgba(0,0,0,0.08);box-shadow:0 2px 12px rgba(0,0,0,0.08);pointer-events:auto">
-        <div style="font-weight:900;font-size:22px;color:#16a34a;line-height:1;letter-spacing:-1px">LIF</div>
-        <div style="font-size:8px;color:#94a3b8;font-weight:700;letter-spacing:2px;margin-top:1px">POR UN PAÍS LIMPIO</div>
+        <svg width="120" height="44" viewBox="130 5 310 105">
+          <g transform="translate(140, 27)">
+            <circle cx="18" cy="18" r="18" fill="#16a34a"/>
+            <path d="M7 30 L18 66 L29 30 Q18 38 7 30Z" fill="#16a34a"/>
+            <ellipse cx="12" cy="11" rx="6" ry="5" fill="rgba(255,255,255,0.25)" transform="rotate(-20,12,11)"/>
+            <circle cx="18" cy="18" r="8" fill="#f8fafc"/>
+            <circle cx="18" cy="18" r="3.5" fill="#16a34a"/>
+          </g>
+          <text x="176" y="92" font-family="Nunito,sans-serif" font-weight="900" font-size="88" letter-spacing="-4" fill="#16a34a">LIF</text>
+          <circle cx="308" cy="84" r="7" fill="#16a34a"/>
+          <text x="320" y="92" font-family="Nunito,sans-serif" font-weight="800" font-size="36" letter-spacing="0" fill="#94a3b8">APP</text>
+        </svg>
       </div>
       <div style="display:flex;gap:8px;pointer-events:auto">
         <div style="background:rgba(255,255,255,0.95);backdrop-filter:blur(16px);border-radius:12px;padding:8px 12px;border:1px solid rgba(0,0,0,0.08);box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;align-items:center;gap:6px">
@@ -159,9 +191,19 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
   <!-- RANKING -->
   <div id="rankScreen">
     <div style="padding:16px 18px 12px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-weight:900;font-size:22px;color:#16a34a;letter-spacing:-1px">LIF</span>
-        <span style="font-size:10px;color:#94a3b8;font-weight:700;letter-spacing:1.5px">POR UN PAÍS LIMPIO</span>
+      <div style="display:flex;align-items:center">
+        <svg width="120" height="44" viewBox="130 5 310 105">
+          <g transform="translate(140, 27)">
+            <circle cx="18" cy="18" r="18" fill="#16a34a"/>
+            <path d="M7 30 L18 66 L29 30 Q18 38 7 30Z" fill="#16a34a"/>
+            <ellipse cx="12" cy="11" rx="6" ry="5" fill="rgba(255,255,255,0.25)" transform="rotate(-20,12,11)"/>
+            <circle cx="18" cy="18" r="8" fill="#f8fafc"/>
+            <circle cx="18" cy="18" r="3.5" fill="#16a34a"/>
+          </g>
+          <text x="176" y="92" font-family="Nunito,sans-serif" font-weight="900" font-size="88" letter-spacing="-4" fill="#16a34a">LIF</text>
+          <circle cx="308" cy="84" r="7" fill="#16a34a"/>
+          <text x="320" y="92" font-family="Nunito,sans-serif" font-weight="800" font-size="36" letter-spacing="0" fill="#94a3b8">APP</text>
+        </svg>
       </div>
     </div>
     <div style="display:flex;gap:8px;padding:10px 16px;background:#fff;border-bottom:1px solid #f1f5f9;flex-shrink:0">
