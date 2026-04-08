@@ -137,7 +137,7 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
   </div>
 
   <!-- FILTROS MAPA — botón compacto que expande hacia la derecha -->
-  <div id="filtrosBar" style="display:none;position:absolute;top:82px;left:12px;right:12px;z-index:190">
+  <div id="filtrosBar" style="display:none;position:absolute;top:82px;left:12px;right:12px;z-index:190;flex-direction:column">
     <div style="display:flex;align-items:center;gap:8px">
 
       <!-- Botón filtro -->
@@ -149,8 +149,8 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
       </button>
 
       <!-- Chips expandibles -->
-      <div id="filtrosChips" style="display:none;flex:1;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none">
-        <div style="display:flex;gap:6px;padding-bottom:2px">
+      <div id="filtrosChips" style="display:none;margin-top:8px">
+        <div style="display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;scrollbar-width:none">
           <!-- Estado -->
           <button class="btn filtro-chip active" id="fest-todos" onclick="setFiltroEstado('todos',this)" style="background:#1e293b;color:#fff;flex-shrink:0">Todos</button>
           <button class="btn filtro-chip" id="fest-activo" onclick="setFiltroEstado('activo',this)" style="flex-shrink:0">🔴 Activos</button>
@@ -393,8 +393,8 @@ async function cargarPins() {
 function toggleFiltros() {
   const chips = document.getElementById("filtrosChips");
   const btn = document.getElementById("btnFiltros");
-  const abierto = chips.style.display === "flex";
-  chips.style.display = abierto ? "none" : "flex";
+  const abierto = chips.style.display !== "none" && chips.style.display !== "";
+  chips.style.display = abierto ? "none" : "block";
   btn.style.background = abierto ? "#fff" : "#1e293b";
   btn.style.color = abierto ? "#1e293b" : "#fff";
 }
