@@ -136,29 +136,36 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
     </div>
   </div>
 
-  <!-- FILTROS MAPA — chips horizontales estilo Google Maps -->
-  <div id="filtrosBar" style="display:none;position:absolute;top:76px;left:0;right:0;z-index:190;padding:0 12px">
-    <div style="display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;scrollbar-width:none">
-      <style>#filtrosBar::-webkit-scrollbar{display:none}</style>
+  <!-- FILTROS MAPA — botón compacto que expande hacia la derecha -->
+  <div id="filtrosBar" style="display:none;position:absolute;top:82px;left:12px;right:12px;z-index:190">
+    <div style="display:flex;align-items:center;gap:8px">
 
-      <!-- Separador visual -->
-      <div style="width:1px;background:rgba(0,0,0,0.08);margin:4px 0;flex-shrink:0"></div>
+      <!-- Botón filtro -->
+      <button class="btn filtro-chip" id="btnFiltros" onclick="toggleFiltros()"
+        style="background:#fff;color:#1e293b;font-weight:800;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:8px 14px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+        Filtros
+        <span id="filtroBadge" style="display:none;background:#16a34a;color:#fff;border-radius:10px;padding:0px 6px;font-size:10px;font-weight:900"></span>
+      </button>
 
-      <!-- ESTADO -->
-      <button class="btn filtro-chip active" id="fest-todos" onclick="setFiltroEstado('todos',this)" style="background:#1e293b;color:#fff;flex-shrink:0">Todos</button>
-      <button class="btn filtro-chip" id="fest-activo" onclick="setFiltroEstado('activo',this)" style="flex-shrink:0">🔴 Activos</button>
-      <button class="btn filtro-chip" id="fest-limpio" onclick="setFiltroEstado('limpio',this)" style="flex-shrink:0">✅ Limpios</button>
+      <!-- Chips expandibles -->
+      <div id="filtrosChips" style="display:none;flex:1;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none">
+        <div style="display:flex;gap:6px;padding-bottom:2px">
+          <!-- Estado -->
+          <button class="btn filtro-chip active" id="fest-todos" onclick="setFiltroEstado('todos',this)" style="background:#1e293b;color:#fff;flex-shrink:0">Todos</button>
+          <button class="btn filtro-chip" id="fest-activo" onclick="setFiltroEstado('activo',this)" style="flex-shrink:0">🔴 Activos</button>
+          <button class="btn filtro-chip" id="fest-limpio" onclick="setFiltroEstado('limpio',this)" style="flex-shrink:0">✅ Limpios</button>
+          <!-- Divisor -->
+          <div style="width:1px;background:rgba(0,0,0,0.12);margin:4px 2px;flex-shrink:0"></div>
+          <!-- Tipo -->
+          <button class="btn filtro-chip" id="ftipo-Basura" onclick="setFiltroTipo('Basura',this)" style="flex-shrink:0">🗑️ Basura</button>
+          <button class="btn filtro-chip" id="ftipo-Residuos domiciliarios" onclick="setFiltroTipo('Residuos domiciliarios',this)" style="flex-shrink:0">🛢️ Domiciliarios</button>
+          <button class="btn filtro-chip" id="ftipo-Escombros" onclick="setFiltroTipo('Escombros',this)" style="flex-shrink:0">🧱 Escombros</button>
+          <button class="btn filtro-chip" id="ftipo-Residuos peligrosos" onclick="setFiltroTipo('Residuos peligrosos',this)" style="flex-shrink:0">☠️ Peligrosos</button>
+          <button class="btn filtro-chip" id="ftipo-Basura en autopista" onclick="setFiltroTipo('Basura en autopista',this)" style="flex-shrink:0">🛣️ Autopista</button>
+        </div>
+      </div>
 
-      <!-- Divisor -->
-      <div style="width:1px;background:rgba(0,0,0,0.1);margin:4px 0;flex-shrink:0"></div>
-
-      <!-- TIPO -->
-      <button class="btn filtro-chip" id="ftipo-todos" onclick="setFiltroTipo('todos',this)" style="flex-shrink:0">🗂️ Tipo</button>
-      <button class="btn filtro-chip" id="ftipo-Basura" onclick="setFiltroTipo('Basura',this)" style="flex-shrink:0">🗑️ Basura</button>
-      <button class="btn filtro-chip" id="ftipo-Residuos domiciliarios" onclick="setFiltroTipo('Residuos domiciliarios',this)" style="flex-shrink:0">🛢️ Domiciliarios</button>
-      <button class="btn filtro-chip" id="ftipo-Escombros" onclick="setFiltroTipo('Escombros',this)" style="flex-shrink:0">🧱 Escombros</button>
-      <button class="btn filtro-chip" id="ftipo-Residuos peligrosos" onclick="setFiltroTipo('Residuos peligrosos',this)" style="flex-shrink:0">☠️ Peligrosos</button>
-      <button class="btn filtro-chip" id="ftipo-Basura en autopista" onclick="setFiltroTipo('Basura en autopista',this)" style="flex-shrink:0">🛣️ Autopista</button>
     </div>
   </div>
 
@@ -383,6 +390,15 @@ async function cargarPins() {
 }
 
 // ── FILTROS ──
+function toggleFiltros() {
+  const chips = document.getElementById("filtrosChips");
+  const btn = document.getElementById("btnFiltros");
+  const abierto = chips.style.display === "flex";
+  chips.style.display = abierto ? "none" : "flex";
+  btn.style.background = abierto ? "#fff" : "#1e293b";
+  btn.style.color = abierto ? "#1e293b" : "#fff";
+}
+
 function setFiltroEstado(v, btn) {
   filtroEstado = v;
   ["fest-todos","fest-activo","fest-limpio"].forEach(id => {
@@ -390,29 +406,41 @@ function setFiltroEstado(v, btn) {
     if (el) { el.style.background="#fff"; el.style.color="#64748b"; }
   });
   btn.style.background = "#1e293b"; btn.style.color = "#fff";
+  actualizarBadge();
   aplicarFiltros();
 }
 
 function setFiltroTipo(v, btn) {
   filtroTipo = v;
-  ["ftipo-todos","ftipo-Basura","ftipo-Residuos domiciliarios","ftipo-Escombros","ftipo-Residuos peligrosos","ftipo-Basura en autopista"].forEach(id => {
+  ["ftipo-Basura","ftipo-Residuos domiciliarios","ftipo-Escombros","ftipo-Residuos peligrosos","ftipo-Basura en autopista"].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.style.background="#fff"; el.style.color="#64748b"; }
   });
-  if (v === "todos") {
-    btn.style.background = "#fff"; btn.style.color = "#64748b";
-  } else {
+  if (v !== "todos") {
     const cfg = TIPOS[v];
     btn.style.background = cfg ? cfg.color : "#1e293b";
     btn.style.color = "#fff";
   }
+  actualizarBadge();
   aplicarFiltros();
 }
 
 function limpiarFiltros() {
   filtroEstado = "todos"; filtroTipo = "todos";
   setFiltroEstado("todos", document.getElementById("fest-todos"));
-  setFiltroTipo("todos", document.getElementById("ftipo-todos"));
+  ["ftipo-Basura","ftipo-Residuos domiciliarios","ftipo-Escombros","ftipo-Residuos peligrosos","ftipo-Basura en autopista"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.style.background="#fff"; el.style.color="#64748b"; }
+  });
+  actualizarBadge();
+  aplicarFiltros();
+}
+
+function actualizarBadge() {
+  const activos = (filtroEstado !== "todos" ? 1 : 0) + (filtroTipo !== "todos" ? 1 : 0);
+  const badge = document.getElementById("filtroBadge");
+  if (activos > 0) { badge.style.display="inline"; badge.textContent = activos; }
+  else badge.style.display = "none";
 }
 
 function aplicarFiltros() {
