@@ -203,11 +203,11 @@ const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const TIPOS = {
-  "Microbasural":           { color:"#f59e0b", emoji:"🗑️", pts:-5  },
-  "Escombros":              { color:"#f97316", emoji:"🧱", pts:-15 },
+  "Basura":                 { color:"#f59e0b", emoji:"🗑️", pts:-5  },
   "Residuos domiciliarios": { color:"#ef4444", emoji:"🛢️", pts:-10 },
-  "Residuos peligrosos":    { color:"#dc2626", emoji:"☠️", pts:-25 },
-  "Basura en autopista":    { color:"#b91c1c", emoji:"🛣️", pts:-20 },
+  "Escombros":              { color:"#f97316", emoji:"🧱", pts:-15 },
+  "Residuos peligrosos":    { color:"#dc2626", emoji:"☠️", pts:-20 },
+  "Basura en autopista":    { color:"#b91c1c", emoji:"🛣️", pts:-5  },
 };
 
 // ── STATE ──
@@ -501,6 +501,8 @@ function mostrarPopup(pin) {
   const limpiezasActuales = pin.confirmaciones_limpieza || 0;
   const barPct = Math.min(100, (limpiezasActuales / limpiezasNecesarias) * 100);
 
+  const esDueño = currentUser && pin.user_id === currentUser.id;
+
   document.getElementById("pinInner").style.border = limpio ? "1px solid #bbf7d0" : `1px solid ${cfg.color}33`;
   document.getElementById("pinInner").innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
@@ -509,14 +511,15 @@ function mostrarPopup(pin) {
         <div>
           <div style="font-size:15px;font-weight:800;color:#1e293b">${pin.tipo}</div>
           <div style="font-size:11px;color:#94a3b8">${pin.comuna} · ${tiempo}</div>
+          ${esDueño?`<div style="font-size:10px;color:#3b82f6;font-weight:700;margin-top:2px">📌 Tu reporte</div>`:""}
           ${limpio?`<div style="font-size:11px;color:#16a34a;font-weight:700;margin-top:2px">🧹 Reportado como limpio</div>`:""}
         </div>
       </div>
       <button class="btn" onclick="cerrarPopup()" style="background:#f1f5f9;color:#64748b;border-radius:8px;padding:4px 9px;font-size:12px;font-weight:700">✕</button>
     </div>
     ${pin.foto_url?`<img src="${pin.foto_url}" style="width:100%;height:110px;object-fit:cover;border-radius:12px;margin-bottom:12px"/>`:""}
-    
-    <div style="display:flex;gap:8px;margin-bottom:${limpio?"0":"12px"}">
+
+    <div style="display:flex;gap:8px;margin-bottom:12px">
       <div style="flex:1;background:#fef2f2;border-radius:10px;padding:8px;text-align:center;border:1px solid #fecaca">
         <div style="font-size:17px;font-weight:900;color:#ef4444">${pin.pts}</div>
         <div style="font-size:10px;color:#94a3b8">pts</div>
@@ -532,7 +535,6 @@ function mostrarPopup(pin) {
     </div>
 
     ${!limpio ? `
-    <!-- Barra de progreso limpieza -->
     <div style="margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;margin-bottom:4px">
         <span>Progreso de limpieza</span>
@@ -543,19 +545,30 @@ function mostrarPopup(pin) {
       </div>
     </div>
 
-    <!-- Botones acción -->
-    <div style="display:flex;gap:8px">
+    ${esDueño ? `
+    <div style="background:#f8fafc;border-radius:12px;padding:12px;text-align:center;border:1px solid #e2e8f0;margin-bottom:10px">
+      <div style="font-size:12px;color:#64748b">Solo otros usuarios pueden confirmar este reporte</div>
+    </div>` : `
+    <div style="display:flex;gap:8px;margin-bottom:10px">
       <button class="btn" onclick="accionPin('${pin.id}','visto')" style="flex:1;background:#eff6ff;border-radius:10px;border:1px solid #bfdbfe;color:#3b82f6;font-size:12px;font-weight:700;padding:10px 6px;text-align:center">
         👀 También<br><span style="font-size:10px;opacity:.8">lo vi</span>
       </button>
       <button class="btn" onclick="accionPin('${pin.id}','limpio')" style="flex:1;background:#f0fdf4;border-radius:10px;border:1px solid #bbf7d0;color:#16a34a;font-size:12px;font-weight:700;padding:10px 6px;text-align:center">
         🧹 Ya está<br><span style="font-size:10px;opacity:.8">limpio</span>
       </button>
-    </div>` : `
-    <div style="background:#f0fdf4;border-radius:12px;padding:12px;text-align:center;border:1px solid #bbf7d0">
+    </div>`}` : `
+    <div style="background:#f0fdf4;border-radius:12px;padding:12px;text-align:center;border:1px solid #bbf7d0;margin-bottom:10px">
       <div style="font-size:13px;font-weight:700;color:#16a34a">✅ Este punto fue limpiado</div>
       <div style="font-size:11px;color:#94a3b8;margin-top:3px">Gracias a la comunidad LIF</div>
-    </div>`}`;
+    </div>`}
+
+    <!-- Botón soporte -->
+    <a href="https://wa.me/56983775672?text=Hola%20LIF%2C%20quiero%20reportar%20un%20problema%20con%20el%20punto%20${pin.id}%20en%20${encodeURIComponent(pin.comuna)}" 
+       target="_blank"
+       style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:12px;background:#f0fdf4;border:1px solid #bbf7d0;color:#16a34a;font-size:12px;font-weight:700;text-decoration:none">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="#16a34a"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Contactar soporte
+    </a>`;
   showEl("pinPopup","block");
 }
 
@@ -625,7 +638,7 @@ function actualizarRanking(pins) {
   pins.forEach(p => {
     if (!mapa[p.comuna]) mapa[p.comuna]={ nombre:p.comuna, tipo:"comuna", pts:0, reportes:0, limpios:0 };
     if (p.estado === "limpio") {
-      mapa[p.comuna].pts += Math.abs(p.pts) * 0.5; // recupera la mitad al limpiar
+      // Recupera el 100% de los puntos al limpiar
       mapa[p.comuna].limpios++;
     } else {
       mapa[p.comuna].pts += p.pts;
