@@ -20,9 +20,8 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes truckBounce{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-3px) rotate(2deg)}}
-@keyframes truckMove{0%{transform:translateX(-10px)}100%{transform:translateX(10px)}}
-@keyframes wheelSpin{to{transform:rotate(360deg)}}
 @keyframes dustPuff{0%{opacity:.8;transform:scale(0.5)}100%{opacity:0;transform:scale(2)}}
+@keyframes slideDown{from{transform:translateY(-10px);opacity:0}to{transform:translateY(0);opacity:1}}
 .sheet{animation:slideUp .3s cubic-bezier(.32,.72,0,1)}
 .overlay{position:absolute;left:0;right:0;bottom:0;z-index:400;background:rgba(255,255,255,0.98);backdrop-filter:blur(24px);border-radius:24px 24px 0 0;padding:20px 20px 40px;border-top:1px solid rgba(0,0,0,0.06);max-height:92dvh;overflow-y:auto;box-shadow:0 -8px 40px rgba(0,0,0,0.12)}
 .pill{width:38px;height:4px;background:rgba(0,0,0,0.12);border-radius:2px;margin:0 auto 18px}
@@ -30,7 +29,6 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
 .input:focus{border-color:#22c55e}
 .input::placeholder{color:#94a3b8}
 .navbar{position:absolute;bottom:0;left:0;right:0;z-index:300;background:rgba(255,255,255,0.97);backdrop-filter:blur(20px);border-top:1px solid rgba(0,0,0,0.08);display:flex;flex-direction:row;padding:10px 0 24px;box-shadow:0 -2px 16px rgba(0,0,0,0.06)}
-/* Mapbox */
 .mapboxgl-ctrl-bottom-right{bottom:85px!important;right:12px!important}
 .mapboxgl-ctrl-group{background:rgba(255,255,255,0.95)!important;border:1px solid rgba(0,0,0,0.1)!important;border-radius:12px!important;overflow:hidden!important;box-shadow:0 2px 12px rgba(0,0,0,0.1)!important}
 .mapboxgl-ctrl-group button{background:transparent!important;border:none!important}
@@ -39,6 +37,11 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
 #rankScreen{position:absolute;inset:0;z-index:500;background:#f1f5f9;display:none;flex-direction:column}
 #rankScreen.on{display:flex}
 #authScreen{position:absolute;inset:0;z-index:600;background:#f1f5f9;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px}
+/* Filtros */
+.filtro-chip{display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:'Nunito',sans-serif;white-space:nowrap;transition:all .18s;background:#fff;color:#64748b;box-shadow:0 2px 8px rgba(0,0,0,0.1);border:1px solid rgba(0,0,0,0.06)}
+.filtro-chip.active{color:#fff;box-shadow:0 2px 10px rgba(0,0,0,0.15)}
+.filtro-chip:active{transform:scale(.95)}
+#filtroPanel{animation:slideDown .2s ease}
 </style>
 </head>
 <body>
@@ -49,13 +52,7 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
   <!-- LOADING -->
   <div id="loading" style="position:absolute;inset:0;background:#f1f5f9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:999">
     <svg width="200" height="72" viewBox="130 5 310 105">
-      <g transform="translate(140, 27)">
-        <circle cx="18" cy="18" r="18" fill="#16a34a"/>
-        <path d="M7 30 L18 66 L29 30 Q18 38 7 30Z" fill="#16a34a"/>
-        <ellipse cx="12" cy="11" rx="6" ry="5" fill="rgba(255,255,255,0.25)" transform="rotate(-20,12,11)"/>
-        <circle cx="18" cy="18" r="8" fill="#f8fafc"/>
-        <circle cx="18" cy="18" r="3.5" fill="#16a34a"/>
-      </g>
+      <g transform="translate(140,27)"><circle cx="18" cy="18" r="18" fill="#16a34a"/><path d="M7 30 L18 66 L29 30 Q18 38 7 30Z" fill="#16a34a"/><ellipse cx="12" cy="11" rx="6" ry="5" fill="rgba(255,255,255,0.25)" transform="rotate(-20,12,11)"/><circle cx="18" cy="18" r="8" fill="#f8fafc"/><circle cx="18" cy="18" r="3.5" fill="#16a34a"/></g>
       <text x="176" y="92" font-family="Nunito,sans-serif" font-weight="900" font-size="88" letter-spacing="-4" fill="#16a34a">LIF</text>
       <circle cx="308" cy="84" r="7" fill="#16a34a"/>
       <text x="320" y="92" font-family="Nunito,sans-serif" font-weight="800" font-size="36" letter-spacing="0" fill="#94a3b8">APP</text>
@@ -65,24 +62,17 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
     <div style="width:36px;height:36px;border:3px solid rgba(22,163,74,0.2);border-top:3px solid #16a34a;border-radius:50%;animation:spin .8s linear infinite;margin-top:4px"></div>
   </div>
 
+  <!-- AUTH -->
   <div id="authScreen" style="display:none">
     <div style="text-align:center;margin-bottom:32px">
       <svg width="200" height="72" viewBox="130 5 310 105">
-      <g transform="translate(140, 27)">
-        <circle cx="18" cy="18" r="18" fill="#16a34a"/>
-        <path d="M7 30 L18 66 L29 30 Q18 38 7 30Z" fill="#16a34a"/>
-        <ellipse cx="12" cy="11" rx="6" ry="5" fill="rgba(255,255,255,0.25)" transform="rotate(-20,12,11)"/>
-        <circle cx="18" cy="18" r="8" fill="#f8fafc"/>
-        <circle cx="18" cy="18" r="3.5" fill="#16a34a"/>
-      </g>
-      <text x="176" y="92" font-family="Nunito,sans-serif" font-weight="900" font-size="88" letter-spacing="-4" fill="#16a34a">LIF</text>
-      <circle cx="308" cy="84" r="7" fill="#16a34a"/>
-      <text x="320" y="92" font-family="Nunito,sans-serif" font-weight="800" font-size="36" letter-spacing="0" fill="#94a3b8">APP</text>
-    </svg>
+        <g transform="translate(140,27)"><circle cx="18" cy="18" r="18" fill="#16a34a"/><path d="M7 30 L18 66 L29 30 Q18 38 7 30Z" fill="#16a34a"/><ellipse cx="12" cy="11" rx="6" ry="5" fill="rgba(255,255,255,0.25)" transform="rotate(-20,12,11)"/><circle cx="18" cy="18" r="8" fill="#f8fafc"/><circle cx="18" cy="18" r="3.5" fill="#16a34a"/></g>
+        <text x="176" y="92" font-family="Nunito,sans-serif" font-weight="900" font-size="88" letter-spacing="-4" fill="#16a34a">LIF</text>
+        <circle cx="308" cy="84" r="7" fill="#16a34a"/>
+        <text x="320" y="92" font-family="Nunito,sans-serif" font-weight="800" font-size="36" letter-spacing="0" fill="#94a3b8">APP</text>
+      </svg>
       <div style="font-size:11px;color:#94a3b8;font-weight:700;letter-spacing:2.5px;margin-top:4px">POR UN PAÍS LIMPIO</div>
     </div>
-
-    <!-- Login -->
     <div id="viewLogin" style="width:100%;max-width:340px">
       <div style="font-size:18px;font-weight:800;color:#1e293b;margin-bottom:6px">Iniciar sesión</div>
       <div style="font-size:13px;color:#94a3b8;margin-bottom:24px">Para reportar necesitas una cuenta</div>
@@ -94,8 +84,6 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
         <button class="btn" onclick="showRegister()" style="padding:12px;border-radius:12px;background:#f1f5f9;color:#64748b;font-size:14px;font-weight:600;border:1.5px solid #e2e8f0">¿No tienes cuenta? Regístrate</button>
       </div>
     </div>
-
-    <!-- Register -->
     <div id="viewRegister" style="display:none;width:100%;max-width:340px">
       <div style="font-size:18px;font-weight:800;color:#1e293b;margin-bottom:6px">Crear cuenta</div>
       <div style="font-size:13px;color:#94a3b8;margin-bottom:24px">Únete y ayuda a limpiar Chile</div>
@@ -124,13 +112,7 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
     <div style="display:flex;align-items:center;justify-content:space-between">
       <div style="background:rgba(255,255,255,0.95);backdrop-filter:blur(16px);border-radius:14px;padding:8px 16px;border:1px solid rgba(0,0,0,0.08);box-shadow:0 2px 12px rgba(0,0,0,0.08);pointer-events:auto">
         <svg width="120" height="44" viewBox="130 5 310 105">
-          <g transform="translate(140, 27)">
-            <circle cx="18" cy="18" r="18" fill="#16a34a"/>
-            <path d="M7 30 L18 66 L29 30 Q18 38 7 30Z" fill="#16a34a"/>
-            <ellipse cx="12" cy="11" rx="6" ry="5" fill="rgba(255,255,255,0.25)" transform="rotate(-20,12,11)"/>
-            <circle cx="18" cy="18" r="8" fill="#f8fafc"/>
-            <circle cx="18" cy="18" r="3.5" fill="#16a34a"/>
-          </g>
+          <g transform="translate(140,27)"><circle cx="18" cy="18" r="18" fill="#16a34a"/><path d="M7 30 L18 66 L29 30 Q18 38 7 30Z" fill="#16a34a"/><ellipse cx="12" cy="11" rx="6" ry="5" fill="rgba(255,255,255,0.25)" transform="rotate(-20,12,11)"/><circle cx="18" cy="18" r="8" fill="#f8fafc"/><circle cx="18" cy="18" r="3.5" fill="#16a34a"/></g>
           <text x="176" y="92" font-family="Nunito,sans-serif" font-weight="900" font-size="88" letter-spacing="-4" fill="#16a34a">LIF</text>
           <circle cx="308" cy="84" r="7" fill="#16a34a"/>
           <text x="320" y="92" font-family="Nunito,sans-serif" font-weight="800" font-size="36" letter-spacing="0" fill="#94a3b8">APP</text>
@@ -143,6 +125,41 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
         </div>
         <button class="btn" onclick="setVista('perfil')" style="background:rgba(255,255,255,0.95);backdrop-filter:blur(16px);border-radius:12px;padding:8px 12px;border:1px solid rgba(0,0,0,0.08);box-shadow:0 2px 8px rgba(0,0,0,0.06);color:#64748b;font-size:12px;font-weight:700">👤</button>
       </div>
+    </div>
+  </div>
+
+  <!-- FILTROS MAPA -->
+  <div id="filtrosBar" style="display:none;position:absolute;top:78px;left:0;right:0;z-index:190;padding:0 12px">
+    <!-- Botón filtro + panel desplegable -->
+    <div style="display:flex;align-items:center;gap:8px">
+      <!-- Botón abrir panel filtros -->
+      <button class="btn filtro-chip" id="btnFiltros" onclick="toggleFiltroPanel()" style="background:#fff;color:#1e293b;font-weight:800;gap:6px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+        <span id="filtroLabel">Filtros</span>
+        <span id="filtroCount" style="display:none;background:#16a34a;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px"></span>
+      </button>
+      <!-- Chips de filtros activos rápidos -->
+      <div id="filtrosActivos" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;flex:1;-webkit-overflow-scrolling:touch"></div>
+    </div>
+
+    <!-- Panel de filtros desplegable -->
+    <div id="filtroPanel" style="display:none;margin-top:8px;background:rgba(255,255,255,0.97);backdrop-filter:blur(16px);border-radius:16px;padding:16px;box-shadow:0 4px 24px rgba(0,0,0,0.12);border:1px solid rgba(0,0,0,0.06)">
+      <div style="font-size:12px;font-weight:800;color:#64748b;letter-spacing:.5px;margin-bottom:10px">ESTADO</div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <button class="btn filtro-chip active" id="fest-todos" onclick="setFiltroEstado('todos',this)" style="background:#1e293b;color:#fff">Todos</button>
+        <button class="btn filtro-chip" id="fest-activo" onclick="setFiltroEstado('activo',this)">🔴 Activos</button>
+        <button class="btn filtro-chip" id="fest-limpio" onclick="setFiltroEstado('limpio',this)">✅ Limpios</button>
+      </div>
+      <div style="font-size:12px;font-weight:800;color:#64748b;letter-spacing:.5px;margin-bottom:10px">TIPO</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn filtro-chip active" id="ftipo-todos" onclick="setFiltroTipo('todos',this)" style="background:#1e293b;color:#fff">Todos</button>
+        <button class="btn filtro-chip" id="ftipo-Basura" onclick="setFiltroTipo('Basura',this)">🗑️ Basura</button>
+        <button class="btn filtro-chip" id="ftipo-Residuos domiciliarios" onclick="setFiltroTipo('Residuos domiciliarios',this)">🛢️ Domiciliarios</button>
+        <button class="btn filtro-chip" id="ftipo-Escombros" onclick="setFiltroTipo('Escombros',this)">🧱 Escombros</button>
+        <button class="btn filtro-chip" id="ftipo-Residuos peligrosos" onclick="setFiltroTipo('Residuos peligrosos',this)">☠️ Peligrosos</button>
+        <button class="btn filtro-chip" id="ftipo-Basura en autopista" onclick="setFiltroTipo('Basura en autopista',this)">🛣️ Autopista</button>
+      </div>
+      <button class="btn" onclick="limpiarFiltros()" style="margin-top:14px;width:100%;padding:10px;border-radius:10px;background:#f1f5f9;color:#64748b;font-size:13px;font-weight:700;border:1px solid #e2e8f0">Limpiar filtros</button>
     </div>
   </div>
 
@@ -162,14 +179,11 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
     <div class="pill"></div>
     <div style="font-size:16px;font-weight:800;color:#1e293b;margin-bottom:3px">Nuevo reporte</div>
     <div style="font-size:12px;color:#94a3b8;margin-bottom:18px">📍 <span id="gpsLabel">Usando tu ubicación actual</span></div>
-
     <div style="margin-bottom:18px">
       <div style="font-size:13px;font-weight:700;color:#64748b;margin-bottom:10px">¿Qué tipo de problema?</div>
       <div id="tipoList" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
-
     <div id="uploadProgress" style="display:none;padding:12px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;margin-bottom:14px;font-size:13px;color:#3b82f6;font-weight:600;text-align:center"></div>
-
     <div style="display:flex;gap:10px">
       <button class="btn" onclick="cancelarReporte()" style="flex:1;padding:13px;border-radius:12px;background:#f1f5f9;color:#64748b;font-size:14px;font-weight:600;border:1.5px solid #e2e8f0">Cancelar</button>
       <button class="btn" id="btnPublicar" onclick="publicarPin()" disabled style="flex:2;padding:13px;border-radius:12px;background:#e2e8f0;color:#94a3b8;font-size:14px;font-weight:800;cursor:not-allowed">📍 Reportar</button>
@@ -195,20 +209,12 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
   <!-- RANKING -->
   <div id="rankScreen">
     <div style="padding:16px 18px 12px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
-      <div style="display:flex;align-items:center">
-        <svg width="120" height="44" viewBox="130 5 310 105">
-          <g transform="translate(140, 27)">
-            <circle cx="18" cy="18" r="18" fill="#16a34a"/>
-            <path d="M7 30 L18 66 L29 30 Q18 38 7 30Z" fill="#16a34a"/>
-            <ellipse cx="12" cy="11" rx="6" ry="5" fill="rgba(255,255,255,0.25)" transform="rotate(-20,12,11)"/>
-            <circle cx="18" cy="18" r="8" fill="#f8fafc"/>
-            <circle cx="18" cy="18" r="3.5" fill="#16a34a"/>
-          </g>
-          <text x="176" y="92" font-family="Nunito,sans-serif" font-weight="900" font-size="88" letter-spacing="-4" fill="#16a34a">LIF</text>
-          <circle cx="308" cy="84" r="7" fill="#16a34a"/>
-          <text x="320" y="92" font-family="Nunito,sans-serif" font-weight="800" font-size="36" letter-spacing="0" fill="#94a3b8">APP</text>
-        </svg>
-      </div>
+      <svg width="120" height="44" viewBox="130 5 310 105">
+        <g transform="translate(140,27)"><circle cx="18" cy="18" r="18" fill="#16a34a"/><path d="M7 30 L18 66 L29 30 Q18 38 7 30Z" fill="#16a34a"/><ellipse cx="12" cy="11" rx="6" ry="5" fill="rgba(255,255,255,0.25)" transform="rotate(-20,12,11)"/><circle cx="18" cy="18" r="8" fill="#f8fafc"/><circle cx="18" cy="18" r="3.5" fill="#16a34a"/></g>
+        <text x="176" y="92" font-family="Nunito,sans-serif" font-weight="900" font-size="88" letter-spacing="-4" fill="#16a34a">LIF</text>
+        <circle cx="308" cy="84" r="7" fill="#16a34a"/>
+        <text x="320" y="92" font-family="Nunito,sans-serif" font-weight="800" font-size="36" letter-spacing="0" fill="#94a3b8">APP</text>
+      </svg>
     </div>
     <div style="display:flex;gap:8px;padding:10px 16px;background:#fff;border-bottom:1px solid #f1f5f9;flex-shrink:0">
       <button class="btn rfBtn active" onclick="setRankFiltro('todos',this)" style="padding:7px 14px;border-radius:20px;font-size:12px;font-weight:700;background:#16a34a;color:#fff;border:none">🌐 Todos</button>
@@ -216,114 +222,56 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
       <button class="btn rfBtn" onclick="setRankFiltro('autopista',this)" style="padding:7px 14px;border-radius:20px;font-size:12px;font-weight:700;background:#f1f5f9;color:#64748b;border:none">🛣️ Autopistas</button>
     </div>
     <div id="rankList" style="flex:1;overflow-y:auto;padding:12px 16px 100px;background:#f1f5f9">
-      <div style="text-align:center;color:#94a3b8;padding:60px 20px">
-        <div style="font-size:40px;margin-bottom:12px">🏆</div>
-        <div style="font-weight:700;color:#64748b">Aún no hay reportes</div>
-        <div style="margin-top:6px;font-size:12px">Sé el primero en reportar</div>
-      </div>
+      <div style="text-align:center;color:#94a3b8;padding:60px 20px"><div style="font-size:40px;margin-bottom:12px">🏆</div><div style="font-weight:700;color:#64748b">Aún no hay reportes</div><div style="margin-top:6px;font-size:12px">Sé el primero en reportar</div></div>
     </div>
     <div style="position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,0.97);backdrop-filter:blur(20px);border-top:1px solid rgba(0,0,0,0.08);display:flex;flex-direction:row;padding:10px 0 24px;z-index:300;box-shadow:0 -2px 16px rgba(0,0,0,0.06)">
-      <button onclick="setVista('mapa')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;font-family:'Nunito',sans-serif;cursor:pointer;color:#1e293b;padding:4px 0;opacity:.3">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
-        <span style="font-size:10px;font-weight:700;letter-spacing:.5px">MAPA</span>
-      </button>
-      <button onclick="setVista('ranking')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;font-family:'Nunito',sans-serif;cursor:pointer;color:#1e293b;padding:4px 0;opacity:1">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        <span style="font-size:10px;font-weight:700;letter-spacing:.5px">RANKING</span>
-      </button>
-      <button onclick="setVista('perfil')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;font-family:'Nunito',sans-serif;cursor:pointer;color:#1e293b;padding:4px 0;opacity:.3">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <span style="font-size:10px;font-weight:700;letter-spacing:.5px">PERFIL</span>
-      </button>
+      <button onclick="setVista('mapa')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;font-family:'Nunito',sans-serif;cursor:pointer;color:#1e293b;padding:4px 0;opacity:.3"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg><span style="font-size:10px;font-weight:700;letter-spacing:.5px">MAPA</span></button>
+      <button onclick="setVista('ranking')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;font-family:'Nunito',sans-serif;cursor:pointer;color:#1e293b;padding:4px 0;opacity:1"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span style="font-size:10px;font-weight:700;letter-spacing:.5px">RANKING</span></button>
+      <button onclick="setVista('perfil')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;font-family:'Nunito',sans-serif;cursor:pointer;color:#1e293b;padding:4px 0;opacity:.3"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span style="font-size:10px;font-weight:700;letter-spacing:.5px">PERFIL</span></button>
     </div>
   </div>
 
   <!-- PERFIL -->
   <div id="perfilScreen" style="position:absolute;inset:0;z-index:500;background:#f1f5f9;display:none;flex-direction:column">
     <div style="padding:16px 18px 12px;background:#fff;border-bottom:1px solid #e2e8f0;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
-      <div style="display:flex;align-items:center;gap:8px">
-        <svg width="120" height="44" viewBox="130 5 310 105">
-          <g transform="translate(140, 27)">
-            <circle cx="18" cy="18" r="18" fill="#16a34a"/>
-            <path d="M7 30 L18 66 L29 30 Q18 38 7 30Z" fill="#16a34a"/>
-            <circle cx="18" cy="18" r="8" fill="#f8fafc"/>
-            <circle cx="18" cy="18" r="3.5" fill="#16a34a"/>
-          </g>
-          <text x="176" y="92" font-family="Nunito,sans-serif" font-weight="900" font-size="88" letter-spacing="-4" fill="#16a34a">LIF</text>
-          <circle cx="308" cy="84" r="7" fill="#16a34a"/>
-          <text x="320" y="92" font-family="Nunito,sans-serif" font-weight="800" font-size="36" letter-spacing="0" fill="#94a3b8">APP</text>
-        </svg>
-      </div>
+      <svg width="120" height="44" viewBox="130 5 310 105">
+        <g transform="translate(140,27)"><circle cx="18" cy="18" r="18" fill="#16a34a"/><path d="M7 30 L18 66 L29 30 Q18 38 7 30Z" fill="#16a34a"/><circle cx="18" cy="18" r="8" fill="#f8fafc"/><circle cx="18" cy="18" r="3.5" fill="#16a34a"/></g>
+        <text x="176" y="92" font-family="Nunito,sans-serif" font-weight="900" font-size="88" letter-spacing="-4" fill="#16a34a">LIF</text>
+        <circle cx="308" cy="84" r="7" fill="#16a34a"/>
+        <text x="320" y="92" font-family="Nunito,sans-serif" font-weight="800" font-size="36" letter-spacing="0" fill="#94a3b8">APP</text>
+      </svg>
     </div>
-
     <div style="flex:1;overflow-y:auto;padding:20px 16px 100px">
-      <!-- Avatar y datos -->
       <div style="background:#fff;border-radius:20px;padding:24px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);text-align:center">
         <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#16a34a);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:32px">👤</div>
         <div style="font-size:18px;font-weight:800;color:#1e293b" id="perfilNombre">—</div>
         <div style="font-size:13px;color:#94a3b8;margin-top:2px" id="perfilEmail">—</div>
         <div style="font-size:11px;color:#cbd5e1;margin-top:4px" id="perfilMiembro">Miembro desde —</div>
       </div>
-
-      <!-- Stats -->
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
-        <div style="background:#fff;border-radius:16px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
-          <div style="font-size:28px;font-weight:900;color:#16a34a" id="statReportes">0</div>
-          <div style="font-size:10px;color:#94a3b8;font-weight:700;margin-top:2px">REPORTES</div>
-        </div>
-        <div style="background:#fff;border-radius:16px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
-          <div style="font-size:28px;font-weight:900;color:#ef4444" id="statPts">0</div>
-          <div style="font-size:10px;color:#94a3b8;font-weight:700;margin-top:2px">PUNTOS</div>
-        </div>
-        <div style="background:#fff;border-radius:16px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
-          <div style="font-size:28px;font-weight:900;color:#3b82f6" id="statLimpios">0</div>
-          <div style="font-size:10px;color:#94a3b8;font-weight:700;margin-top:2px">LIMPIOS</div>
-        </div>
+        <div style="background:#fff;border-radius:16px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.06)"><div style="font-size:28px;font-weight:900;color:#16a34a" id="statReportes">0</div><div style="font-size:10px;color:#94a3b8;font-weight:700;margin-top:2px">REPORTES</div></div>
+        <div style="background:#fff;border-radius:16px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.06)"><div style="font-size:28px;font-weight:900;color:#ef4444" id="statPts">0</div><div style="font-size:10px;color:#94a3b8;font-weight:700;margin-top:2px">PUNTOS</div></div>
+        <div style="background:#fff;border-radius:16px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.06)"><div style="font-size:28px;font-weight:900;color:#3b82f6" id="statLimpios">0</div><div style="font-size:10px;color:#94a3b8;font-weight:700;margin-top:2px">LIMPIOS</div></div>
       </div>
-
-      <!-- Mis reportes -->
       <div style="font-size:13px;font-weight:800;color:#64748b;letter-spacing:.5px;margin-bottom:10px">MIS REPORTES</div>
-      <div id="misReportesList">
-        <div style="text-align:center;color:#94a3b8;padding:32px 20px;background:#fff;border-radius:16px">
-          <div style="font-size:32px;margin-bottom:8px">📍</div>
-          <div style="font-weight:700;color:#64748b;font-size:14px">Aún no has reportado</div>
-          <div style="font-size:12px;margin-top:4px">Toca el mapa y reporta tu primer punto crítico</div>
-        </div>
-      </div>
-
-      <!-- Cerrar sesión -->
-      <button class="btn" onclick="doLogout()" style="width:100%;margin-top:20px;padding:14px;border-radius:14px;background:#fff;border:1.5px solid #e2e8f0;color:#64748b;font-size:14px;font-weight:700">
-        Cerrar sesión
-      </button>
+      <div id="misReportesList"><div style="text-align:center;color:#94a3b8;padding:32px 20px;background:#fff;border-radius:16px"><div style="font-size:32px;margin-bottom:8px">📍</div><div style="font-weight:700;color:#64748b;font-size:14px">Aún no has reportado</div><div style="font-size:12px;margin-top:4px">Toca el mapa y reporta tu primer punto crítico</div></div></div>
+      <button class="btn" onclick="doLogout()" style="width:100%;margin-top:20px;padding:14px;border-radius:14px;background:#fff;border:1.5px solid #e2e8f0;color:#64748b;font-size:14px;font-weight:700">Cerrar sesión</button>
     </div>
-
     <div style="position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,0.97);backdrop-filter:blur(20px);border-top:1px solid rgba(0,0,0,0.08);display:flex;flex-direction:row;padding:10px 0 24px;z-index:300;box-shadow:0 -2px 16px rgba(0,0,0,0.06)">
-      <button onclick="setVista('mapa')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;font-family:'Nunito',sans-serif;cursor:pointer;color:#1e293b;padding:4px 0;opacity:.3">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
-        <span style="font-size:10px;font-weight:700;letter-spacing:.5px">MAPA</span>
-      </button>
-      <button onclick="setVista('ranking')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;font-family:'Nunito',sans-serif;cursor:pointer;color:#1e293b;padding:4px 0;opacity:.3">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        <span style="font-size:10px;font-weight:700;letter-spacing:.5px">RANKING</span>
-      </button>
-      <button onclick="setVista('perfil')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;font-family:'Nunito',sans-serif;cursor:pointer;color:#1e293b;padding:4px 0;opacity:1">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <span style="font-size:10px;font-weight:700;letter-spacing:.5px">PERFIL</span>
-      </button>
+      <button onclick="setVista('mapa')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;font-family:'Nunito',sans-serif;cursor:pointer;color:#1e293b;padding:4px 0;opacity:.3"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg><span style="font-size:10px;font-weight:700;letter-spacing:.5px">MAPA</span></button>
+      <button onclick="setVista('ranking')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;font-family:'Nunito',sans-serif;cursor:pointer;color:#1e293b;padding:4px 0;opacity:.3"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span style="font-size:10px;font-weight:700;letter-spacing:.5px">RANKING</span></button>
+      <button onclick="setVista('perfil')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;font-family:'Nunito',sans-serif;cursor:pointer;color:#1e293b;padding:4px 0;opacity:1"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span style="font-size:10px;font-weight:700;letter-spacing:.5px">PERFIL</span></button>
     </div>
   </div>
 
   <!-- NOTIF -->
   <div id="notif" style="display:none;position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#fff;border:1px solid #bbf7d0;color:#16a34a;padding:11px 22px;border-radius:14px;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.12);white-space:nowrap;animation:fadeIn .2s ease"></div>
-
 </div>
 
 <script>
-// ── CONFIG ──
 const MAPBOX_TOKEN = "pk.eyJ1IjoiYm9yamE5MDgiLCJhIjoiY21ua2ZjeWxiMG82MDJwcHYyZGdxbGY0eSJ9.feVF5TXANdeweXWMH3NAcA";
 const SUPABASE_URL = "https://ebfyluscbldfrstreimu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViZnlsdXNjYmxkZnJzdHJlaW11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MjM4MDEsImV4cCI6MjA5MDk5OTgwMX0.fsMb0H0AD1ldyyAD04Yb07RQdPugsaa9GZRleDCDoJc";
-
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -335,79 +283,53 @@ const TIPOS = {
   "Basura en autopista":    { color:"#b91c1c", emoji:"🛣️", pts:-5  },
 };
 
-// ── STATE ──
 let map, userLat, userLng, userMarker, truckMarker, currentUser;
 let lastHeading = 0;
-let tipoSel="";
-let rankFiltro="todos", vista="mapa";
+let tipoSel = "";
+let rankFiltro = "todos", vista = "mapa";
 let notifTimer;
+let todosLosPins = [];
+let filtroEstado = "todos", filtroTipo = "todos";
+let filtroPanelAbierto = false;
+const markerRefs = {};
 
 // ── INIT ──
 window.onload = async () => {
-  setText("loadMsg", "Verificando sesión...");
+  setText("loadMsg","Verificando sesión...");
   const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    currentUser = session.user;
-    setText("loadMsg", "Solicitando GPS...");
-    pedirGPS();
-  } else {
-    hide("loading");
-    showEl("authScreen","flex");
-  }
-
+  if (session) { currentUser = session.user; setText("loadMsg","Solicitando GPS..."); pedirGPS(); }
+  else { hide("loading"); showEl("authScreen","flex"); }
   sb.auth.onAuthStateChange((event, session) => {
-    if (event === "SIGNED_IN" && session) {
-      currentUser = session.user;
-      hide("authScreen");
-      showEl("loading","flex");
-      setText("loadMsg","Solicitando GPS...");
-      pedirGPS();
-    }
-    if (event === "SIGNED_OUT") {
-      currentUser = null;
-      hide("header"); hide("navbar"); hide("reportBtn");
-      showEl("authScreen","flex");
-    }
+    if (event === "SIGNED_IN" && session) { currentUser = session.user; hide("authScreen"); showEl("loading","flex"); setText("loadMsg","Solicitando GPS..."); pedirGPS(); }
+    if (event === "SIGNED_OUT") { currentUser = null; hide("header"); hide("navbar"); hide("reportBtn"); hide("filtrosBar"); showEl("authScreen","flex"); }
   });
 };
 
 // ── AUTH ──
 function showLogin()    { show("viewLogin"); hide("viewRegister"); }
 function showRegister() { hide("viewLogin"); show("viewRegister"); }
-
 async function doLogin() {
-  const email = val("loginEmail");
-  const pass  = val("loginPass");
+  const email = val("loginEmail"), pass = val("loginPass");
   if (!email||!pass) { showError("loginError","Completa todos los campos"); return; }
-  hide("loginError");
-  setBtnText("btnLogin","Ingresando...");
+  hide("loginError"); setBtnText("btnLogin","Ingresando...");
   const { error } = await sb.auth.signInWithPassword({ email, password:pass });
   setBtnText("btnLogin","Ingresar");
   if (error) showError("loginError", tradError(error.message));
 }
-
 async function doRegister() {
-  const nombre = val("regNombre");
-  const email  = val("regEmail");
-  const pass   = val("regPass");
+  const nombre = val("regNombre"), email = val("regEmail"), pass = val("regPass");
   if (!nombre||!email||!pass) { showError("regError","Completa todos los campos"); return; }
-  if (pass.length < 6)        { showError("regError","La contraseña debe tener al menos 6 caracteres"); return; }
+  if (pass.length < 6) { showError("regError","Mín. 6 caracteres"); return; }
   hide("regError");
   const { error } = await sb.auth.signUp({ email, password:pass, options:{ data:{ nombre } } });
   if (error) { showError("regError", tradError(error.message)); return; }
-  hide("regError");
   showEl("regSuccess","block");
-  document.getElementById("regSuccess").textContent = "✅ Cuenta creada. Revisa tu correo para confirmar.";
+  document.getElementById("regSuccess").textContent = "✅ Cuenta creada. Revisa tu correo.";
 }
-
-async function doLogout() {
-  await sb.auth.signOut();
-}
-
+async function doLogout() { await sb.auth.signOut(); }
 function tradError(msg) {
   if (msg.includes("Invalid login")) return "Correo o contraseña incorrectos";
   if (msg.includes("already registered")) return "Este correo ya tiene cuenta";
-  if (msg.includes("valid email")) return "Ingresa un correo válido";
   return msg;
 }
 
@@ -416,98 +338,116 @@ function pedirGPS() {
   if (!navigator.geolocation) { mostrarGPSDenied(); return; }
   navigator.geolocation.getCurrentPosition(onGPS, mostrarGPSDenied, { enableHighAccuracy:true, timeout:15000 });
 }
-
-function onGPS(pos) {
-  userLat = pos.coords.latitude;
-  userLng = pos.coords.longitude;
-  setText("loadMsg","Cargando mapa...");
-  initMap();
-}
-
+function onGPS(pos) { userLat = pos.coords.latitude; userLng = pos.coords.longitude; setText("loadMsg","Cargando mapa..."); initMap(); }
 function mostrarGPSDenied() { hide("loading"); showEl("gpsDenied","flex"); }
 
 // ── MAP ──
 function rotateTruck(heading) {
   if (!truckMarker) return;
-  const h = heading || lastHeading;
-  lastHeading = h;
+  lastHeading = heading || lastHeading;
   const el = truckMarker.getElement();
-  if (el) el.style.transform = `rotate(${h}deg)`;
+  if (el) el.style.transform = `rotate(${lastHeading}deg)`;
 }
-
 function initMap() {
   mapboxgl.accessToken = MAPBOX_TOKEN;
-  map = new mapboxgl.Map({
-    container:"map", style:"mapbox://styles/mapbox/streets-v12",
-    center:[userLng, userLat], zoom:15, attributionControl:false
-  });
+  map = new mapboxgl.Map({ container:"map", style:"mapbox://styles/mapbox/streets-v12", center:[userLng,userLat], zoom:15, attributionControl:false });
   map.addControl(new mapboxgl.NavigationControl({showCompass:false}), "bottom-right");
   map.on("load", onMapLoad);
 }
-
 async function onMapLoad() {
-  // Punto azul usuario
   const el = document.createElement("div");
-  el.style.cssText="width:18px;height:18px;border-radius:50%;background:#3b82f6;border:3px solid #fff;box-shadow:0 0 0 6px rgba(59,130,246,0.25)";
+  el.style.cssText = "width:18px;height:18px;border-radius:50%;background:#3b82f6;border:3px solid #fff;box-shadow:0 0 0 6px rgba(59,130,246,0.25)";
   userMarker = new mapboxgl.Marker({element:el,anchor:"center"}).setLngLat([userLng,userLat]).addTo(map);
-
-  // 🚛 Camión de basura animado (el usuario)
   const truck = document.createElement("div");
-  truck.id = "truckMarker";
-  truck.innerHTML = `
-    <div style="position:relative;animation:truckBounce 0.6s ease-in-out infinite;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.25))">
-      <svg width="52" height="38" viewBox="0 0 52 38" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <!-- Cuerpo principal -->
-        <rect x="2" y="8" width="34" height="20" rx="3" fill="#16a34a"/>
-        <!-- Cabina -->
-        <rect x="36" y="12" width="14" height="16" rx="3" fill="#15803d"/>
-        <!-- Ventana cabina -->
-        <rect x="38" y="14" width="9" height="8" rx="2" fill="#bfdbfe"/>
-        <!-- Techo cabina -->
-        <rect x="37" y="10" width="13" height="4" rx="2" fill="#166534"/>
-        <!-- Línea separadora -->
-        <rect x="34" y="10" width="3" height="18" rx="1" fill="#166534"/>
-        <!-- Letrero LIF -->
-        <rect x="6" y="12" width="22" height="10" rx="2" fill="#dcfce7"/>
-        <text x="17" y="20" text-anchor="middle" font-size="7" font-weight="900" fill="#16a34a" font-family="Nunito,sans-serif">LIF</text>
-        <!-- Ruedas -->
-        <circle cx="12" cy="30" r="6" fill="#1e293b"/>
-        <circle cx="12" cy="30" r="3" fill="#64748b"/>
-        <circle cx="38" cy="30" r="6" fill="#1e293b"/>
-        <circle cx="38" cy="30" r="3" fill="#64748b"/>
-        <!-- Faro -->
-        <rect x="48" y="18" width="4" height="5" rx="1" fill="#fde047"/>
-      </svg>
-      <!-- Polvo animado -->
-      <div style="position:absolute;left:-8px;bottom:2px;width:10px;height:10px;border-radius:50%;background:rgba(100,116,139,0.3);animation:dustPuff 0.8s ease-out infinite"></div>
-    </div>`;
+  truck.innerHTML = `<div style="position:relative;animation:truckBounce 0.6s ease-in-out infinite;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.25))"><svg width="52" height="38" viewBox="0 0 52 38" fill="none"><rect x="2" y="8" width="34" height="20" rx="3" fill="#16a34a"/><rect x="36" y="12" width="14" height="16" rx="3" fill="#15803d"/><rect x="38" y="14" width="9" height="8" rx="2" fill="#bfdbfe"/><rect x="37" y="10" width="13" height="4" rx="2" fill="#166534"/><rect x="34" y="10" width="3" height="18" rx="1" fill="#166534"/><rect x="6" y="12" width="22" height="10" rx="2" fill="#dcfce7"/><text x="17" y="20" text-anchor="middle" font-size="7" font-weight="900" fill="#16a34a" font-family="Nunito,sans-serif">LIF</text><circle cx="12" cy="30" r="6" fill="#1e293b"/><circle cx="12" cy="30" r="3" fill="#64748b"/><circle cx="38" cy="30" r="6" fill="#1e293b"/><circle cx="38" cy="30" r="3" fill="#64748b"/><rect x="48" y="18" width="4" height="5" rx="1" fill="#fde047"/></svg><div style="position:absolute;left:-8px;bottom:2px;width:10px;height:10px;border-radius:50%;background:rgba(100,116,139,0.3);animation:dustPuff 0.8s ease-out infinite"></div></div>`;
   truck.style.cssText = "background:none;border:none;cursor:default";
-  truckMarker = new mapboxgl.Marker({element:truck, anchor:"bottom"})
-    .setLngLat([userLng, userLat])
-    .addTo(map);
-
-  // Seguir ubicación — mueve AMBOS marcadores
+  truckMarker = new mapboxgl.Marker({element:truck,anchor:"bottom"}).setLngLat([userLng,userLat]).addTo(map);
   navigator.geolocation.watchPosition(pos=>{
     userLat=pos.coords.latitude; userLng=pos.coords.longitude;
     userMarker.setLngLat([userLng,userLat]);
     truckMarker.setLngLat([userLng,userLat]);
-    // Rotar camión según dirección
     rotateTruck(pos.coords.heading);
   },null,{enableHighAccuracy:true});
-
   hide("loading");
-  showEl("header","block"); showEl("reportBtn","flex"); showEl("navbar","flex");
+  showEl("header","block"); showEl("reportBtn","flex"); showEl("navbar","flex"); showEl("filtrosBar","flex");
   buildTipoList();
   await cargarPins();
 }
 
-// ── CARGAR PINS DESDE SUPABASE ──
+// ── PINS ──
 async function cargarPins() {
-  const { data, error } = await sb.from("reportes").select("*").order("created_at", {ascending:false});
+  const { data, error } = await sb.from("reportes").select("*").order("created_at",{ascending:false});
   if (error) { console.error(error); return; }
+  todosLosPins = data;
   data.forEach(p => agregarMarker(p));
   setText("pinCount", `${data.length} reporte${data.length!==1?"s":""}`);
   actualizarRanking(data);
+}
+
+// ── FILTROS ──
+function toggleFiltroPanel() {
+  filtroPanelAbierto = !filtroPanelAbierto;
+  document.getElementById("filtroPanel").style.display = filtroPanelAbierto ? "block" : "none";
+  document.getElementById("btnFiltros").style.background = filtroPanelAbierto ? "#1e293b" : "#fff";
+  document.getElementById("btnFiltros").style.color = filtroPanelAbierto ? "#fff" : "#1e293b";
+}
+
+function setFiltroEstado(v, btn) {
+  filtroEstado = v;
+  document.querySelectorAll("[id^='fest-']").forEach(b => { b.style.background="#fff"; b.style.color="#64748b"; });
+  btn.style.background = "#1e293b"; btn.style.color = "#fff";
+  aplicarFiltros();
+}
+
+function setFiltroTipo(v, btn) {
+  filtroTipo = v;
+  document.querySelectorAll("[id^='ftipo-']").forEach(b => { b.style.background="#fff"; b.style.color="#64748b"; });
+  btn.style.background = "#1e293b"; btn.style.color = "#fff";
+  aplicarFiltros();
+}
+
+function limpiarFiltros() {
+  filtroEstado = "todos"; filtroTipo = "todos";
+  document.getElementById("fest-todos").style.background = "#1e293b"; document.getElementById("fest-todos").style.color = "#fff";
+  document.getElementById("ftipo-todos").style.background = "#1e293b"; document.getElementById("ftipo-todos").style.color = "#fff";
+  ["fest-activo","fest-limpio"].forEach(id => { const el=document.getElementById(id); if(el){el.style.background="#fff";el.style.color="#64748b";} });
+  Object.keys(TIPOS).forEach(t => { const el=document.getElementById(`ftipo-${t}`); if(el){el.style.background="#fff";el.style.color="#64748b";} });
+  aplicarFiltros();
+}
+
+function aplicarFiltros() {
+  // Mostrar/ocultar markers según filtros
+  Object.values(markerRefs).forEach(({ marker, pin }) => {
+    const pasaEstado = filtroEstado === "todos" || pin.estado === filtroEstado || (!pin.estado && filtroEstado === "activo");
+    const pasaTipo   = filtroTipo === "todos" || pin.tipo === filtroTipo;
+    marker.getElement().style.display = (pasaEstado && pasaTipo) ? "block" : "none";
+  });
+
+  // Actualizar contador
+  const visibles = Object.values(markerRefs).filter(({ pin }) => {
+    const pasaEstado = filtroEstado === "todos" || pin.estado === filtroEstado || (!pin.estado && filtroEstado === "activo");
+    const pasaTipo   = filtroTipo === "todos" || pin.tipo === filtroTipo;
+    return pasaEstado && pasaTipo;
+  }).length;
+  setText("pinCount", `${visibles} reporte${visibles!==1?"s":""}`);
+
+  // Badge contador filtros activos
+  const activos = (filtroEstado !== "todos" ? 1 : 0) + (filtroTipo !== "todos" ? 1 : 0);
+  const badge = document.getElementById("filtroCount");
+  if (activos > 0) { badge.style.display="inline"; badge.textContent = activos; setText("filtroLabel","Filtros"); }
+  else { badge.style.display="none"; setText("filtroLabel","Filtros"); }
+
+  // Chips activos rápidos
+  const chips = document.getElementById("filtrosActivos");
+  chips.innerHTML = "";
+  if (filtroEstado !== "todos") {
+    const etiquetas = { activo:"🔴 Activos", limpio:"✅ Limpios" };
+    chips.innerHTML += `<button class="btn filtro-chip active" style="background:#1e293b;color:#fff;flex-shrink:0" onclick="setFiltroEstado('todos',document.getElementById('fest-todos'))">${etiquetas[filtroEstado]} ✕</button>`;
+  }
+  if (filtroTipo !== "todos") {
+    const cfg = TIPOS[filtroTipo];
+    chips.innerHTML += `<button class="btn filtro-chip active" style="background:${cfg.color};color:#fff;flex-shrink:0" onclick="setFiltroTipo('todos',document.getElementById('ftipo-todos'))">${cfg.emoji} ${filtroTipo} ✕</button>`;
+  }
 }
 
 // ── TIPOS ──
@@ -521,71 +461,44 @@ function buildTipoList() {
       <span style="font-size:13px;font-weight:800;color:${c.color}">${c.pts} pts</span>
     </button>`).join("");
 }
-
 function selTipo(t, btn) {
   tipoSel = t;
-  document.querySelectorAll("#tipoList .btn").forEach(b=>{
-    b.style.background="#f8fafc";
-    b.style.border="1.5px solid #e2e8f0";
-  });
-  btn.style.background=`${TIPOS[t].color}15`;
-  btn.style.border=`1.5px solid ${TIPOS[t].color}66`;
+  document.querySelectorAll("#tipoList .btn").forEach(b=>{ b.style.background="#f8fafc"; b.style.border="1.5px solid #e2e8f0"; });
+  btn.style.background=`${TIPOS[t].color}15`; btn.style.border=`1.5px solid ${TIPOS[t].color}66`;
   checkPublicar();
 }
-
 function checkPublicar() {
-  const btn = document.getElementById("btnPublicar");
-  const ok = !!tipoSel;
-  btn.disabled = !ok;
-  btn.style.background = ok ? "linear-gradient(135deg,#22c55e,#16a34a)" : "#e2e8f0";
-  btn.style.color = ok ? "#fff" : "#94a3b8";
-  btn.style.cursor = ok ? "pointer" : "not-allowed";
-  btn.style.boxShadow = ok ? "0 4px 16px rgba(34,197,94,.3)" : "none";
+  const btn = document.getElementById("btnPublicar"), ok = !!tipoSel;
+  btn.disabled=!ok; btn.style.background=ok?"linear-gradient(135deg,#22c55e,#16a34a)":"#e2e8f0";
+  btn.style.color=ok?"#fff":"#94a3b8"; btn.style.cursor=ok?"pointer":"not-allowed";
+  btn.style.boxShadow=ok?"0 4px 16px rgba(34,197,94,.3)":"none";
 }
 
 // ── REPORTE ──
 function iniciarReporte() {
-  hide("pinPopup");
-  showEl("sheetReporte","block");
-  tipoSel = "";
-  hide("uploadProgress");
-  buildTipoList();
-  checkPublicar();
-  setText("gpsLabel", `${userLat.toFixed(5)}, ${userLng.toFixed(5)}`);
+  hide("pinPopup"); showEl("sheetReporte","block"); tipoSel=""; hide("uploadProgress");
+  buildTipoList(); checkPublicar();
+  setText("gpsLabel",`${userLat.toFixed(5)}, ${userLng.toFixed(5)}`);
 }
-
 function cancelarReporte() { hide("sheetReporte"); }
-
 async function publicarPin() {
   if (!tipoSel) return;
   const btn = document.getElementById("btnPublicar");
-  btn.disabled = true; btn.textContent = "Publicando...";
+  btn.disabled=true; btn.textContent="Publicando...";
   const prog = document.getElementById("uploadProgress");
-  prog.style.display = "block"; prog.textContent = "📍 Detectando ubicación...";
-
+  prog.style.display="block"; prog.textContent="📍 Detectando ubicación...";
   const comuna = await detectarComuna(userLat, userLng);
-  prog.textContent = "💾 Guardando reporte...";
-
+  prog.textContent="💾 Guardando reporte...";
   const cfg = TIPOS[tipoSel];
   const { data, error } = await sb.from("reportes").insert({
-    user_id: currentUser.id,
-    user_email: currentUser.email,
-    lat: userLat, lng: userLng,
-    tipo: tipoSel, comuna,
-    pts: cfg.pts,
-    verificaciones: 1,
-    estado: "activo"
+    user_id:currentUser.id, user_email:currentUser.email,
+    lat:userLat, lng:userLng, tipo:tipoSel, comuna, pts:cfg.pts, verificaciones:1, estado:"activo"
   }).select().single();
-
-  if (error) {
-    prog.style.display = "none";
-    notify("❌ Error al guardar. Intenta de nuevo.");
-    btn.disabled = false; btn.textContent = "📍 Reportar";
-    return;
-  }
-
+  if (error) { prog.style.display="none"; notify("❌ Error al guardar. Intenta de nuevo."); btn.disabled=false; btn.textContent="📍 Reportar"; return; }
+  todosLosPins.push(data);
   agregarMarker(data);
-  setText("pinCount", `${Object.keys(markerRefs).length} reportes`);
+  aplicarFiltros();
+  setText("pinCount",`${Object.keys(markerRefs).length} reportes`);
   await actualizarRankingDesdeDB();
   hide("sheetReporte"); hide("uploadProgress");
   notify(`📍 Reporte en ${comuna} · ${cfg.pts} pts`);
@@ -593,7 +506,7 @@ async function publicarPin() {
 
 // ── MARKERS ──
 function makePinHTML(tipo, ver, estado) {
-  const c = TIPOS[tipo]||TIPOS["Microbasural"];
+  const c = TIPOS[tipo]||TIPOS["Basura"];
   const limpio = estado === "limpio";
   const color = limpio ? "#94a3b8" : c.color;
   const emoji = limpio ? "✅" : c.emoji;
@@ -605,31 +518,26 @@ function makePinHTML(tipo, ver, estado) {
     ${ver>1?`<div style="position:absolute;top:-5px;right:-10px;background:#fff;color:#111;border-radius:8px;font-size:9px;font-weight:900;padding:1px 5px;box-shadow:0 1px 4px rgba(0,0,0,0.15)">×${ver}</div>`:""}
   </div>`;
 }
-
-const markerRefs = {};
-
 function agregarMarker(pin) {
   if (!map) return;
   const el = document.createElement("div");
   el.innerHTML = makePinHTML(pin.tipo, pin.verificaciones||1, pin.estado||"activo");
-  el.style.cssText="background:none;border:none;cursor:pointer";
+  el.style.cssText = "background:none;border:none;cursor:pointer";
   el.addEventListener("click", e=>{ e.stopPropagation(); mostrarPopup(pin); });
   const m = new mapboxgl.Marker({element:el,anchor:"bottom"}).setLngLat([pin.lng,pin.lat]).addTo(map);
   markerRefs[pin.id] = { marker:m, pin };
 }
 
 function mostrarPopup(pin) {
-  const cfg = TIPOS[pin.tipo]||TIPOS["Microbasural"];
+  const cfg = TIPOS[pin.tipo]||TIPOS["Basura"];
   const limpio = pin.estado === "limpio";
   hide("reportBtn");
   const d = new Date(pin.created_at);
   const tiempo = d.toLocaleDateString("es-CL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
   const limpiezasNecesarias = 3;
   const limpiezasActuales = pin.confirmaciones_limpieza || 0;
-  const barPct = Math.min(100, (limpiezasActuales / limpiezasNecesarias) * 100);
-
+  const barPct = Math.min(100,(limpiezasActuales/limpiezasNecesarias)*100);
   const esDueño = currentUser && pin.user_id === currentUser.id;
-
   document.getElementById("pinInner").style.border = limpio ? "1px solid #bbf7d0" : `1px solid ${cfg.color}33`;
   document.getElementById("pinInner").innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
@@ -645,164 +553,99 @@ function mostrarPopup(pin) {
       <button class="btn" onclick="cerrarPopup()" style="background:#f1f5f9;color:#64748b;border-radius:8px;padding:4px 9px;font-size:12px;font-weight:700">✕</button>
     </div>
     ${pin.foto_url?`<img src="${pin.foto_url}" style="width:100%;height:110px;object-fit:cover;border-radius:12px;margin-bottom:12px"/>`:""}
-
     <div style="display:flex;gap:8px;margin-bottom:12px">
-      <div style="flex:1;background:#fef2f2;border-radius:10px;padding:8px;text-align:center;border:1px solid #fecaca">
-        <div style="font-size:17px;font-weight:900;color:#ef4444">${pin.pts}</div>
-        <div style="font-size:10px;color:#94a3b8">pts</div>
-      </div>
-      <div style="flex:1;background:#f1f5f9;border-radius:10px;padding:8px;text-align:center;border:1px solid #e2e8f0">
-        <div style="font-size:17px;font-weight:900;color:#1e293b">×${pin.verificaciones||1}</div>
-        <div style="font-size:10px;color:#94a3b8">vistos</div>
-      </div>
-      <div style="flex:1;background:#f0fdf4;border-radius:10px;padding:8px;text-align:center;border:1px solid #bbf7d0">
-        <div style="font-size:17px;font-weight:900;color:#16a34a">${limpiezasActuales}/${limpiezasNecesarias}</div>
-        <div style="font-size:10px;color:#94a3b8">limpios</div>
-      </div>
+      <div style="flex:1;background:#fef2f2;border-radius:10px;padding:8px;text-align:center;border:1px solid #fecaca"><div style="font-size:17px;font-weight:900;color:#ef4444">${pin.pts}</div><div style="font-size:10px;color:#94a3b8">pts</div></div>
+      <div style="flex:1;background:#f1f5f9;border-radius:10px;padding:8px;text-align:center;border:1px solid #e2e8f0"><div style="font-size:17px;font-weight:900;color:#1e293b">×${pin.verificaciones||1}</div><div style="font-size:10px;color:#94a3b8">vistos</div></div>
+      <div style="flex:1;background:#f0fdf4;border-radius:10px;padding:8px;text-align:center;border:1px solid #bbf7d0"><div style="font-size:17px;font-weight:900;color:#16a34a">${limpiezasActuales}/${limpiezasNecesarias}</div><div style="font-size:10px;color:#94a3b8">limpios</div></div>
     </div>
-
-    ${!limpio ? `
+    ${!limpio?`
     <div style="margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;margin-bottom:4px">
-        <span>Progreso de limpieza</span>
-        <span>${limpiezasActuales}/${limpiezasNecesarias} confirmaciones</span>
-      </div>
-      <div style="height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden">
-        <div style="height:100%;width:${barPct}%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:3px;transition:width .5s ease"></div>
-      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;margin-bottom:4px"><span>Progreso de limpieza</span><span>${limpiezasActuales}/${limpiezasNecesarias}</span></div>
+      <div style="height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden"><div style="height:100%;width:${barPct}%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:3px;transition:width .5s ease"></div></div>
     </div>
-
-    ${esDueño ? `
-    <div style="background:#f8fafc;border-radius:12px;padding:12px;text-align:center;border:1px solid #e2e8f0;margin-bottom:10px">
-      <div style="font-size:12px;color:#64748b">Solo otros usuarios pueden confirmar este reporte</div>
-    </div>` : `
+    ${esDueño?`<div style="background:#f8fafc;border-radius:12px;padding:12px;text-align:center;border:1px solid #e2e8f0;margin-bottom:10px"><div style="font-size:12px;color:#64748b">Solo otros usuarios pueden confirmar este reporte</div></div>`:`
     <div style="display:flex;gap:8px;margin-bottom:10px">
-      <button class="btn" onclick="accionPin('${pin.id}','visto')" style="flex:1;background:#eff6ff;border-radius:10px;border:1px solid #bfdbfe;color:#3b82f6;font-size:12px;font-weight:700;padding:10px 6px;text-align:center">
-        👀 También<br><span style="font-size:10px;opacity:.8">lo vi</span>
-      </button>
-      <button class="btn" onclick="accionPin('${pin.id}','limpio')" style="flex:1;background:#f0fdf4;border-radius:10px;border:1px solid #bbf7d0;color:#16a34a;font-size:12px;font-weight:700;padding:10px 6px;text-align:center">
-        🧹 Ya está<br><span style="font-size:10px;opacity:.8">limpio</span>
-      </button>
-    </div>`}` : `
-    <div style="background:#f0fdf4;border-radius:12px;padding:12px;text-align:center;border:1px solid #bbf7d0;margin-bottom:10px">
-      <div style="font-size:13px;font-weight:700;color:#16a34a">✅ Este punto fue limpiado</div>
-      <div style="font-size:11px;color:#94a3b8;margin-top:3px">Gracias a la comunidad LIF</div>
-    </div>`}
-
-    <!-- Botón soporte -->
-    <a href="https://wa.me/56983775672?text=Hola%20LIF%2C%20quiero%20reportar%20un%20problema%20con%20el%20punto%20${pin.id}%20en%20${encodeURIComponent(pin.comuna)}" 
-       target="_blank"
-       style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:12px;background:#f0fdf4;border:1px solid #bbf7d0;color:#16a34a;font-size:12px;font-weight:700;text-decoration:none">
+      <button class="btn" onclick="accionPin('${pin.id}','visto')" style="flex:1;background:#eff6ff;border-radius:10px;border:1px solid #bfdbfe;color:#3b82f6;font-size:12px;font-weight:700;padding:10px 6px;text-align:center">👀 También<br><span style="font-size:10px;opacity:.8">lo vi</span></button>
+      <button class="btn" onclick="accionPin('${pin.id}','limpio')" style="flex:1;background:#f0fdf4;border-radius:10px;border:1px solid #bbf7d0;color:#16a34a;font-size:12px;font-weight:700;padding:10px 6px;text-align:center">🧹 Ya está<br><span style="font-size:10px;opacity:.8">limpio</span></button>
+    </div>`}`:`
+    <div style="background:#f0fdf4;border-radius:12px;padding:12px;text-align:center;border:1px solid #bbf7d0;margin-bottom:10px"><div style="font-size:13px;font-weight:700;color:#16a34a">✅ Este punto fue limpiado</div><div style="font-size:11px;color:#94a3b8;margin-top:3px">Gracias a la comunidad LIF</div></div>`}
+    <a href="https://wa.me/56983775672?text=Hola%20LIF%2C%20quiero%20reportar%20un%20problema%20con%20el%20punto%20${pin.id}%20en%20${encodeURIComponent(pin.comuna)}" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:12px;background:#f0fdf4;border:1px solid #bbf7d0;color:#16a34a;font-size:12px;font-weight:700;text-decoration:none">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="#16a34a"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
       Contactar soporte
     </a>`;
   showEl("pinPopup","block");
 }
-
 function cerrarPopup() { hide("pinPopup"); showEl("reportBtn","flex"); }
 
 async function accionPin(id, tipo) {
   if (!currentUser) { notify("Debes iniciar sesión"); return; }
-
-  // Evitar doble voto
-  const { data: yaVoto } = await sb.from("confirmaciones")
-    .select("id").eq("reporte_id", id).eq("user_id", currentUser.id).eq("tipo", tipo).single();
+  const { data: yaVoto } = await sb.from("confirmaciones").select("id").eq("reporte_id",id).eq("user_id",currentUser.id).eq("tipo",tipo).single();
   if (yaVoto) { notify("Ya confirmaste esto antes 👍"); return; }
-
-  // Registrar confirmación
   await sb.from("confirmaciones").insert({ reporte_id:id, user_id:currentUser.id, tipo });
-
   if (tipo === "visto") {
-    // Sumar verificación
     const ref = markerRefs[id];
-    const vActual = (ref?.pin?.verificaciones || 1) + 1;
-    await sb.from("reportes").update({ verificaciones: vActual }).eq("id", id);
+    const vActual = (ref?.pin?.verificaciones||1)+1;
+    await sb.from("reportes").update({ verificaciones:vActual }).eq("id",id);
     if (ref) ref.pin.verificaciones = vActual;
     notify("👀 ¡Gracias! Basura confirmada");
-
   } else if (tipo === "limpio") {
-    // Sumar confirmación de limpieza
     const ref = markerRefs[id];
-    const lActual = (ref?.pin?.confirmaciones_limpieza || 0) + 1;
+    const lActual = (ref?.pin?.confirmaciones_limpieza||0)+1;
     const nuevoEstado = lActual >= 3 ? "limpio" : "activo";
-    await sb.from("reportes").update({
-      confirmaciones_limpieza: lActual,
-      estado: nuevoEstado
-    }).eq("id", id);
-
+    await sb.from("reportes").update({ confirmaciones_limpieza:lActual, estado:nuevoEstado }).eq("id",id);
     if (ref) {
-      ref.pin.confirmaciones_limpieza = lActual;
-      ref.pin.estado = nuevoEstado;
-      // Actualizar visual del marker
+      ref.pin.confirmaciones_limpieza = lActual; ref.pin.estado = nuevoEstado;
       ref.marker.getElement().innerHTML = makePinHTML(ref.pin.tipo, ref.pin.verificaciones||1, nuevoEstado);
     }
-
-    if (nuevoEstado === "limpio") {
-      notify("🧹 ¡Punto marcado como limpio! La comuna suma puntos positivos");
-      await actualizarRankingDesdeDB();
-    } else {
-      notify(`🧹 Limpieza reportada (${lActual}/3 confirmaciones)`);
-    }
+    if (nuevoEstado === "limpio") { notify("🧹 ¡Punto marcado como limpio!"); await actualizarRankingDesdeDB(); }
+    else notify(`🧹 Limpieza reportada (${lActual}/3 confirmaciones)`);
   }
   cerrarPopup();
 }
 
 // ── RANKING ──
 function getRankColor(pts) {
-  if (pts>-20) return "#22c55e";
-  if (pts>-50) return "#eab308";
-  if (pts>-100) return "#f97316";
-  return "#ef4444";
+  if (pts>-20) return "#22c55e"; if (pts>-50) return "#eab308";
+  if (pts>-100) return "#f97316"; return "#ef4444";
 }
-
 async function actualizarRankingDesdeDB() {
   const { data } = await sb.from("reportes").select("*");
-  if (data) actualizarRanking(data);
+  if (data) { todosLosPins = data; actualizarRanking(data); }
 }
-
 function actualizarRanking(pins) {
   const mapa = {};
   pins.forEach(p => {
-    const key = p.comuna || "Chile";
-    if (!mapa[key]) mapa[key] = { nombre:key, tipo:"comuna", pts:0, reportes:0, limpios:0 };
-    if (p.estado === "limpio") {
-      mapa[key].limpios++;
-    } else {
-      mapa[key].pts += p.pts;
-    }
+    const key = p.comuna||"Chile";
+    if (!mapa[key]) mapa[key]={ nombre:key, tipo:"comuna", pts:0, reportes:0, limpios:0 };
+    if (p.estado==="limpio") mapa[key].limpios++;
+    else mapa[key].pts += p.pts;
     mapa[key].reportes++;
-    if (p.tipo === "Basura en autopista") mapa[key].tipo = "autopista";
+    if (p.tipo==="Basura en autopista") mapa[key].tipo="autopista";
   });
-  renderRanking(Object.values(mapa).sort((a,b) => a.pts - b.pts));
+  renderRanking(Object.values(mapa).sort((a,b)=>a.pts-b.pts));
 }
-
 function setRankFiltro(f, btn) {
   rankFiltro=f;
   document.querySelectorAll(".rfBtn").forEach(b=>{ b.style.background="#f1f5f9"; b.style.color="#64748b"; });
   btn.style.background="#16a34a"; btn.style.color="#fff";
   actualizarRankingDesdeDB();
 }
-
 function renderRanking(lista) {
   const filtered = lista.filter(r=>rankFiltro==="todos"?true:r.tipo===rankFiltro);
   const el = document.getElementById("rankList");
-  if (!filtered.length) {
-    el.innerHTML=`<div style="text-align:center;color:#334155;padding:60px 20px"><div style="font-size:40px;margin-bottom:12px">🏆</div><div style="font-weight:700;color:#475569">Aún no hay reportes</div><div style="margin-top:6px;font-size:12px">Sé el primero en reportar</div></div>`;
-    return;
-  }
+  if (!filtered.length) { el.innerHTML=`<div style="text-align:center;color:#94a3b8;padding:60px 20px"><div style="font-size:40px;margin-bottom:12px">🏆</div><div style="font-weight:700;color:#64748b">Aún no hay reportes</div></div>`; return; }
   const top=filtered[0];
   let html=`<div style="margin:0 0 12px;background:linear-gradient(135deg,#fef2f2,#fff1f1);border:1px solid #fecaca;border-radius:18px;padding:16px">
     <div style="font-size:10px;color:#ef4444;letter-spacing:2px;font-weight:800;margin-bottom:6px">💀 MÁS SUCIA</div>
     <div style="display:flex;justify-content:space-between;align-items:center">
-      <div><div style="font-size:22px;font-weight:900;color:#1e293b">${top.nombre}</div>
-      <div style="font-size:12px;color:#94a3b8">${top.tipo==="autopista"?"🛣️ Concesionaria":"🏘️ Municipalidad"} · ${top.reportes} reporte${top.reportes!==1?"s":""}</div></div>
+      <div><div style="font-size:22px;font-weight:900;color:#1e293b">${top.nombre}</div><div style="font-size:12px;color:#94a3b8">${top.tipo==="autopista"?"🛣️ Concesionaria":"🏘️ Municipalidad"} · ${top.reportes} reporte${top.reportes!==1?"s":""}</div></div>
       <div style="text-align:right"><div style="font-size:32px;font-weight:900;color:#ef4444">${top.pts}</div><div style="font-size:10px;color:#94a3b8">pts penalización</div></div>
     </div>
   </div>`;
   filtered.slice(1).forEach((r,i)=>{
     html+=`<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:8px;border-radius:14px;background:#fff;border:1px solid #e2e8f0;border-left:3px solid ${getRankColor(r.pts)};box-shadow:0 1px 4px rgba(0,0,0,0.04)">
       <div style="width:28px;height:28px;border-radius:8px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#94a3b8;flex-shrink:0">${i+2}</div>
-      <div style="flex:1"><div style="font-weight:800;font-size:14px;color:#1e293b">${r.nombre}</div><div style="font-size:11px;color:#94a3b8">${r.tipo==="autopista"?"🛣️":"🏘️"} ${r.reportes} reporte${r.reportes!==1?"s":""}</div></div>
+      <div style="flex:1"><div style="font-weight:800;font-size:14px;color:#1e293b">${r.nombre}</div><div style="font-size:11px;color:#94a3b8">${r.tipo==="autopista"?"🛣️":"🏘️"} ${r.reportes} reporte${r.reportes!==1?"s":""} ${r.limpios>0?`· 🧹 ${r.limpios} limpios`:""}</div></div>
       <div style="font-size:16px;font-weight:900;color:${getRankColor(r.pts)}">${r.pts}</div>
     </div>`;
   });
@@ -810,102 +653,51 @@ function renderRanking(lista) {
 }
 
 // ── DETECTAR COMUNA ──
-// ── DETECTAR COMUNA — Todo Chile via Nominatim ──
 async function detectarComuna(lat, lng) {
   try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=es`,
-      { headers: { "User-Agent": "LIF.APP/1.0 contacto@lif.app" } }
-    );
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=es`,{ headers:{"User-Agent":"LIF.APP/1.0"} });
     const data = await res.json();
-    const addr = data.address || {};
-
-    // Nominatim devuelve distintos campos según la zona
-    const comuna = addr.municipality || addr.city || addr.town || addr.village || addr.county || addr.state_district || "Chile";
-    const region = addr.state || "";
-
-    // Si es autopista o ruta, devolver nombre de la vía
-    if (addr.road && (addr.road.toLowerCase().includes("autopista") || addr.road.toLowerCase().includes("ruta"))) {
-      return addr.road;
-    }
-
+    const addr = data.address||{};
+    const comuna = addr.municipality||addr.city||addr.town||addr.village||addr.county||addr.state_district||"Chile";
+    const region = addr.state||"";
+    if (addr.road&&(addr.road.toLowerCase().includes("autopista")||addr.road.toLowerCase().includes("ruta"))) return addr.road;
     return region ? `${comuna}, ${region}` : comuna;
-  } catch(e) {
-    console.warn("Nominatim error:", e);
-    return "Chile";
-  }
+  } catch { return "Chile"; }
 }
 
 // ── VISTA ──
 function setVista(v) {
   vista = v;
-  document.getElementById("rankScreen").classList.toggle("on", v === "ranking");
-  const ps = document.getElementById("perfilScreen");
-  ps.style.display = v === "perfil" ? "flex" : "none";
-
-  const navs = { mapa:"navMapa", ranking:"navRank", perfil:"navPerfil" };
-  ["navMapa","navRank","navPerfil"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.opacity = "0.3";
-  });
-  const active = navs[v];
-  if (active && document.getElementById(active)) document.getElementById(active).style.opacity = "1";
-
-  if (v === "ranking") actualizarRankingDesdeDB();
-  if (v === "perfil") cargarPerfil();
+  document.getElementById("rankScreen").classList.toggle("on", v==="ranking");
+  document.getElementById("perfilScreen").style.display = v==="perfil" ? "flex" : "none";
+  document.getElementById("filtrosBar").style.display = v==="mapa" ? "flex" : "none";
+  ["navMapa","navRank","navPerfil"].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.opacity="0.3"; });
+  const navMap = { mapa:"navMapa", ranking:"navRank", perfil:"navPerfil" };
+  const active = navMap[v]; if(active&&document.getElementById(active)) document.getElementById(active).style.opacity="1";
+  if (v==="ranking") actualizarRankingDesdeDB();
+  if (v==="perfil") cargarPerfil();
+  if (filtroPanelAbierto && v!=="mapa") { filtroPanelAbierto=false; document.getElementById("filtroPanel").style.display="none"; }
 }
 
+// ── PERFIL ──
 async function cargarPerfil() {
   if (!currentUser) return;
-
-  // Datos del usuario
   const nombre = currentUser.user_metadata?.nombre || currentUser.email?.split("@")[0] || "Usuario";
-  const email  = currentUser.email || "";
-  const desde  = new Date(currentUser.created_at).toLocaleDateString("es-CL", { month:"long", year:"numeric" });
-
-  setText("perfilNombre", nombre);
-  setText("perfilEmail", email);
-  setText("perfilMiembro", `Miembro desde ${desde}`);
-
-  // Mis reportes desde Supabase
-  const { data: misReportes } = await sb.from("reportes")
-    .select("*")
-    .eq("user_id", currentUser.id)
-    .order("created_at", { ascending: false });
-
-  if (!misReportes || misReportes.length === 0) {
-    setText("statReportes", "0");
-    setText("statPts", "0");
-    setText("statLimpios", "0");
-    return;
-  }
-
-  const totalPts  = misReportes.reduce((a,r) => a + Math.abs(r.pts), 0);
-  const limpios   = misReportes.filter(r => r.estado === "limpio").length;
-  const activos   = misReportes.filter(r => r.estado !== "limpio").length;
-
+  setText("perfilNombre", nombre); setText("perfilEmail", currentUser.email||"");
+  setText("perfilMiembro", `Miembro desde ${new Date(currentUser.created_at).toLocaleDateString("es-CL",{month:"long",year:"numeric"})}`);
+  const { data: misReportes } = await sb.from("reportes").select("*").eq("user_id",currentUser.id).order("created_at",{ascending:false});
+  if (!misReportes||misReportes.length===0) { setText("statReportes","0"); setText("statPts","0"); setText("statLimpios","0"); return; }
   setText("statReportes", misReportes.length);
-  setText("statPts", totalPts);
-  setText("statLimpios", limpios);
-
-  // Lista de mis reportes
-  const TIPOS_EMO = { "Basura":"🗑️","Residuos domiciliarios":"🛢️","Escombros":"🧱","Residuos peligrosos":"☠️","Basura en autopista":"🛣️" };
-  const lista = document.getElementById("misReportesList");
-  lista.innerHTML = misReportes.map(r => {
+  setText("statPts", misReportes.reduce((a,r)=>a+Math.abs(r.pts),0));
+  setText("statLimpios", misReportes.filter(r=>r.estado==="limpio").length);
+  const TIPOS_EMO = {"Basura":"🗑️","Residuos domiciliarios":"🛢️","Escombros":"🧱","Residuos peligrosos":"☠️","Basura en autopista":"🛣️"};
+  document.getElementById("misReportesList").innerHTML = misReportes.map(r=>{
     const fecha = new Date(r.created_at).toLocaleDateString("es-CL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
-    const limpio = r.estado === "limpio";
+    const limpio = r.estado==="limpio";
     return `<div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,0.05);display:flex;align-items:center;gap:12px;border-left:3px solid ${limpio?"#22c55e":"#ef4444"}">
       <div style="font-size:24px;flex-shrink:0">${TIPOS_EMO[r.tipo]||"📍"}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:800;color:#1e293b">${r.tipo}</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:2px">${r.comuna} · ${fecha}</div>
-        <div style="font-size:11px;font-weight:700;margin-top:3px;color:${limpio?"#16a34a":"#ef4444"}">${limpio?"✅ Limpiado":"🔴 Activo"}</div>
-      </div>
-      <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:16px;font-weight:900;color:#ef4444">${r.pts}</div>
-        <div style="font-size:10px;color:#94a3b8">pts</div>
-        <div style="font-size:11px;color:#64748b;margin-top:2px">×${r.verificaciones||1} vistos</div>
-      </div>
+      <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800;color:#1e293b">${r.tipo}</div><div style="font-size:11px;color:#94a3b8;margin-top:2px">${r.comuna} · ${fecha}</div><div style="font-size:11px;font-weight:700;margin-top:3px;color:${limpio?"#16a34a":"#ef4444"}">${limpio?"✅ Limpiado":"🔴 Activo"}</div></div>
+      <div style="text-align:right;flex-shrink:0"><div style="font-size:16px;font-weight:900;color:#ef4444">${r.pts}</div><div style="font-size:10px;color:#94a3b8">pts</div><div style="font-size:11px;color:#64748b;margin-top:2px">×${r.verificaciones||1} vistos</div></div>
     </div>`;
   }).join("");
 }
