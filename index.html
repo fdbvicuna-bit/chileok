@@ -467,7 +467,7 @@ async function publicarPin() {
   btn.disabled=true; btn.textContent="Publicando...";
   const prog = document.getElementById("uploadProgress");
   prog.style.display="block"; prog.textContent="📍 Detectando ubicación...";
-  const comuna = await detectarComuna(userLat, userLng);
+  const comuna = await detectarComuna(userLat, userLng, tipoSel);
   prog.textContent="💾 Guardando reporte...";
   const cfg = TIPOS[tipoSel];
   const { data, error } = await sb.from("reportes").insert({
@@ -633,16 +633,52 @@ function renderRanking(lista) {
 }
 
 // ── DETECTAR COMUNA ──
-async function detectarComuna(lat, lng) {
+async function detectarComuna(lat, lng, tipo = "") {
   try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=es`,{ headers:{"User-Agent":"LIF.APP/1.0"} });
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=es`,
+      { headers:{ "User-Agent":"LIF.APP/1.0" } }
+    );
     const data = await res.json();
-    const addr = data.address||{};
-    const comuna = addr.municipality||addr.city||addr.town||addr.village||addr.county||addr.state_district||"Chile";
-    const region = addr.state||"";
-    if (addr.road&&(addr.road.toLowerCase().includes("autopista")||addr.road.toLowerCase().includes("ruta"))) return addr.road;
-    return region ? `${comuna}, ${region}` : comuna;
-  } catch { return "Chile"; }
+    const addr = data.address || {};
+
+    // Solo buscar autopista si el tipo es explícitamente "Basura en autopista"
+    if (tipo === "Basura en autopista") {
+      const road = addr.road || addr.motorway || addr.trunk || "";
+      const isHighway =
+        road.toLowerCase().includes("autopista") ||
+        road.match(/^ruta\s+/i) ||
+        data.class === "highway" ||
+        data.type === "motorway";
+
+      if (isHighway && road) return road;
+
+      // Fallback con comuna si no detectó autopista
+      const comunaFallback = addr.municipality || addr.city || addr.town || addr.village || "Chile";
+      return `Autopista - ${comunaFallback}`;
+    }
+
+    // Para todos los demás tipos → comuna normal, nunca autopista
+    const comuna =
+      addr.municipality ||
+      addr.city_district ||
+      addr.city ||
+      addr.town ||
+      addr.village ||
+      addr.county ||
+      addr.state_district ||
+      "Chile";
+
+    const region = addr.state || "";
+    const comunaClean = comuna.replace(/\s*\(.*\)/, "").trim();
+    return region && !comunaClean.includes(region)
+      ? `${comunaClean}, ${region}`
+      : comunaClean;
+
+  } catch(e) {
+    console.warn("Nominatim error:", e);
+    return "Chile";
+  }
 }
 
 // ── VISTA ──
