@@ -131,28 +131,16 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
     <div style="font-size:16px;font-weight:800;color:#1e293b;margin-bottom:3px">Nuevo reporte</div>
     <div style="font-size:12px;color:#94a3b8;margin-bottom:18px">📍 <span id="gpsLabel">Usando tu ubicación actual</span></div>
 
-    <div style="margin-bottom:16px">
-      <div style="font-size:13px;font-weight:700;color:#64748b;margin-bottom:8px">1. Foto del punto crítico <span style="color:#ef4444">*</span></div>
-      <input type="file" id="fotoInput" accept="image/*" capture="environment" style="display:none" onchange="onFotoSelected(this)"/>
-      <div id="fotoBox" onclick="document.getElementById('fotoInput').click()" style="height:150px;border:2px dashed #e2e8f0;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;overflow:hidden;position:relative;background:#f8fafc">
-        <span style="font-size:34px">📷</span>
-        <span style="font-size:13px;font-weight:700;color:#64748b">Toca para sacar foto</span>
-        <span style="font-size:11px;color:#94a3b8">La IA verificará que sea basura real</span>
-      </div>
+    <div style="margin-bottom:18px">
+      <div style="font-size:13px;font-weight:700;color:#64748b;margin-bottom:10px">¿Qué tipo de problema?</div>
+      <div id="tipoList" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
 
-    <div style="margin-bottom:16px">
-      <div style="font-size:13px;font-weight:700;color:#64748b;margin-bottom:8px">2. Tipo de basura <span style="color:#ef4444">*</span></div>
-      <div id="tipoList" style="display:flex;flex-direction:column;gap:7px"></div>
-    </div>
-
-    <div id="aiBox" style="display:none;padding:13px 15px;border-radius:13px;margin-bottom:14px;font-size:13px;font-weight:600;line-height:1.5"></div>
-
-    <div id="uploadProgress" style="display:none;padding:12px;border-radius:12px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);margin-bottom:14px;font-size:13px;color:#93c5fd;font-weight:600;text-align:center"></div>
+    <div id="uploadProgress" style="display:none;padding:12px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;margin-bottom:14px;font-size:13px;color:#3b82f6;font-weight:600;text-align:center"></div>
 
     <div style="display:flex;gap:10px">
-      <button class="btn" onclick="cancelarReporte()" style="flex:1;padding:13px;border-radius:12px;background:rgba(255,255,255,0.06);color:#64748b;font-size:14px;font-weight:600">Cancelar</button>
-      <button class="btn" id="btnPublicar" onclick="publicarPin()" disabled style="flex:2;padding:13px;border-radius:12px;background:rgba(255,255,255,0.06);color:#475569;font-size:14px;font-weight:800;cursor:not-allowed">🚀 Publicar</button>
+      <button class="btn" onclick="cancelarReporte()" style="flex:1;padding:13px;border-radius:12px;background:#f1f5f9;color:#64748b;font-size:14px;font-weight:600;border:1.5px solid #e2e8f0">Cancelar</button>
+      <button class="btn" id="btnPublicar" onclick="publicarPin()" disabled style="flex:2;padding:13px;border-radius:12px;background:#e2e8f0;color:#94a3b8;font-size:14px;font-weight:800;cursor:not-allowed">📍 Reportar</button>
     </div>
   </div>
 
@@ -225,9 +213,9 @@ const TIPOS = {
 // ── STATE ──
 let map, userLat, userLng, userMarker, truckMarker, currentUser;
 let lastHeading = 0;
-let tipoSel="", fotoFile=null, fotoB64="", aiOk=false;
+let tipoSel="";
 let rankFiltro="todos", vista="mapa";
-let notifTimer, pendingMarker=null;
+let notifTimer;
 
 // ── INIT ──
 window.onload = async () => {
@@ -411,103 +399,44 @@ function buildTipoList() {
 
 function selTipo(t, btn) {
   tipoSel = t;
-  document.querySelectorAll("#tipoList .btn").forEach(b=>{ b.style.background="rgba(255,255,255,0.05)"; b.style.border="1px solid rgba(255,255,255,0.07)"; });
-  btn.style.background=`${TIPOS[t].color}18`; btn.style.border=`1px solid ${TIPOS[t].color}55`;
-  checkPublicar();
-}
-
-// ── FOTO + IA ──
-function onFotoSelected(input) {
-  const file = input.files[0];
-  if (!file) return;
-  fotoFile = file;
-  const reader = new FileReader();
-  reader.onload = e => {
-    fotoB64 = e.target.result.split(",")[1];
-    document.getElementById("fotoBox").innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:14px"/>
-      <div style="position:absolute;bottom:8px;right:8px;background:rgba(5,10,20,0.85);border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;color:#22c55e">✓ Foto lista</div>`;
-    analizarConIA();
-  };
-  reader.readAsDataURL(file);
-}
-
-async function analizarConIA() {
-  const box = document.getElementById("aiBox");
-  box.style.cssText="display:block;padding:13px 15px;border-radius:13px;margin-bottom:14px;font-size:13px;font-weight:600;line-height:1.5;background:#eff6ff;border:1px solid #bfdbfe;color:#3b82f6";
-  box.innerHTML=`<div style="display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border:2px solid #bfdbfe;border-top:2px solid #3b82f6;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0"></div>Verificando con IA que sea basura real...</div>`;
-  aiOk=false; checkPublicar();
-
-  try {
-    const res = await fetch("/api/verificar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imagen: fotoB64, tipo: tipoSel })
-    });
-
-    if (!res.ok) throw new Error("Error servidor");
-    const json = await res.json();
-
-    if (json.aprobado) {
-      aiOk = true;
-      box.style.cssText="display:block;padding:13px 15px;border-radius:13px;margin-bottom:14px;font-size:13px;font-weight:600;line-height:1.5;background:#f0fdf4;border:1px solid #bbf7d0;color:#16a34a";
-      box.innerHTML=`✅ <strong>Verificado:</strong> ${json.descripcion} · <strong>${json.severidad}</strong>`;
-    } else {
-      aiOk = false;
-      box.style.cssText="display:block;padding:13px 15px;border-radius:13px;margin-bottom:14px;font-size:13px;font-weight:600;line-height:1.5;background:#fef2f2;border:1px solid #fecaca;color:#dc2626";
-      box.innerHTML=`❌ <strong>Foto rechazada:</strong> ${json.motivo_rechazo || "No se detectó basura real"}. Saca una foto más clara del punto crítico.`;
-    }
-  } catch(e) {
-    // Si falla la función, bloqueamos el reporte
-    aiOk = false;
-    box.style.cssText="display:block;padding:13px 15px;border-radius:13px;margin-bottom:14px;font-size:13px;font-weight:600;line-height:1.5;background:#fefce8;border:1px solid #fef08a;color:#ca8a04";
-    box.innerHTML=`⚠️ No se pudo verificar la foto. Revisa tu conexión e intenta de nuevo.`;
-  }
+  document.querySelectorAll("#tipoList .btn").forEach(b=>{
+    b.style.background="#f8fafc";
+    b.style.border="1.5px solid #e2e8f0";
+  });
+  btn.style.background=`${TIPOS[t].color}15`;
+  btn.style.border=`1.5px solid ${TIPOS[t].color}66`;
   checkPublicar();
 }
 
 function checkPublicar() {
   const btn = document.getElementById("btnPublicar");
-  const ok = tipoSel && fotoB64 && aiOk;
-  btn.disabled=!ok;
-  btn.style.background=ok?"linear-gradient(135deg,#22c55e,#16a34a)":"rgba(255,255,255,0.06)";
-  btn.style.color=ok?"#fff":"#475569";
-  btn.style.cursor=ok?"pointer":"not-allowed";
-  btn.style.boxShadow=ok?"0 4px 16px rgba(34,197,94,.4)":"none";
+  const ok = !!tipoSel;
+  btn.disabled = !ok;
+  btn.style.background = ok ? "linear-gradient(135deg,#22c55e,#16a34a)" : "#e2e8f0";
+  btn.style.color = ok ? "#fff" : "#94a3b8";
+  btn.style.cursor = ok ? "pointer" : "not-allowed";
+  btn.style.boxShadow = ok ? "0 4px 16px rgba(34,197,94,.3)" : "none";
 }
 
 // ── REPORTE ──
 function iniciarReporte() {
-  hide("pinPopup"); showEl("sheetReporte","block");
-  tipoSel=""; fotoFile=null; fotoB64=""; aiOk=false;
-  document.getElementById("fotoInput").value="";
-  document.getElementById("fotoBox").innerHTML=`<span style="font-size:34px">📷</span><span style="font-size:13px;font-weight:700;color:#64748b">Toca para sacar foto</span><span style="font-size:11px;color:#334155">La IA verificará que sea basura real</span>`;
-  hide("aiBox"); hide("uploadProgress");
-  buildTipoList(); checkPublicar();
-  setText("gpsLabel",`${userLat.toFixed(5)}, ${userLng.toFixed(5)}`);
+  hide("pinPopup");
+  showEl("sheetReporte","block");
+  tipoSel = "";
+  hide("uploadProgress");
+  buildTipoList();
+  checkPublicar();
+  setText("gpsLabel", `${userLat.toFixed(5)}, ${userLng.toFixed(5)}`);
 }
 
 function cancelarReporte() { hide("sheetReporte"); }
 
 async function publicarPin() {
-  if (!tipoSel||!fotoB64||!aiOk) return;
+  if (!tipoSel) return;
   const btn = document.getElementById("btnPublicar");
-  btn.disabled=true; btn.textContent="Subiendo...";
+  btn.disabled = true; btn.textContent = "Publicando...";
   const prog = document.getElementById("uploadProgress");
-  prog.style.display="block"; prog.textContent="📤 Subiendo foto...";
-
-  let foto_url = null;
-  try {
-    // Subir foto a Supabase Storage
-    const ext = fotoFile.name.split(".").pop() || "jpg";
-    const path = `${currentUser.id}/${Date.now()}.${ext}`;
-    const { error: upErr } = await sb.storage.from("fotos-reportes").upload(path, fotoFile, {contentType: fotoFile.type});
-    if (!upErr) {
-      const { data: urlData } = sb.storage.from("fotos-reportes").getPublicUrl(path);
-      foto_url = urlData.publicUrl;
-    }
-  } catch(e) { console.warn("Error subiendo foto:",e); }
-
-  prog.textContent="💾 Guardando reporte...";
+  prog.style.display = "block"; prog.textContent = "💾 Guardando reporte...";
 
   const comuna = detectarComuna(userLat, userLng);
   const cfg = TIPOS[tipoSel];
@@ -518,22 +447,21 @@ async function publicarPin() {
     tipo: tipoSel, comuna,
     pts: cfg.pts,
     verificaciones: 1,
-    foto_url
+    estado: "activo"
   }).select().single();
 
   if (error) {
-    prog.style.display="none";
-    notify("❌ Error al guardar. Intenta de nuevo."); 
-    btn.disabled=false; btn.textContent="🚀 Publicar";
+    prog.style.display = "none";
+    notify("❌ Error al guardar. Intenta de nuevo.");
+    btn.disabled = false; btn.textContent = "📍 Reportar";
     return;
   }
 
   agregarMarker(data);
-  const total = document.querySelectorAll(".lif-marker").length;
-  setText("pinCount",`${total} reporte${total!==1?"s":""}`);
+  setText("pinCount", `${Object.keys(markerRefs).length} reportes`);
   await actualizarRankingDesdeDB();
   hide("sheetReporte"); hide("uploadProgress");
-  notify(`📍 Reporte publicado en ${comuna} · ${cfg.pts} pts`);
+  notify(`📍 Reporte en ${comuna} · ${cfg.pts} pts`);
 }
 
 // ── MARKERS ──
