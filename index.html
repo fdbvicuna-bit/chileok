@@ -390,8 +390,8 @@ async function cargarPins() {
 function toggleFiltros() {
   const chips = document.getElementById("filtrosChips");
   const btn = document.getElementById("btnFiltros");
-  const abierto = chips.style.display === "inline-flex";
-  chips.style.display = abierto ? "none" : "inline-flex";
+  const abierto = chips.style.display === "flex";
+  chips.style.display = abierto ? "none" : "flex";
   btn.style.background = abierto ? "#fff" : "#1e293b";
   btn.style.color = abierto ? "#1e293b" : "#fff";
 }
