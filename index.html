@@ -478,9 +478,11 @@ async function publicarPin() {
   const btn = document.getElementById("btnPublicar");
   btn.disabled = true; btn.textContent = "Publicando...";
   const prog = document.getElementById("uploadProgress");
-  prog.style.display = "block"; prog.textContent = "💾 Guardando reporte...";
+  prog.style.display = "block"; prog.textContent = "📍 Detectando ubicación...";
 
-  const comuna = detectarComuna(userLat, userLng);
+  const comuna = await detectarComuna(userLat, userLng);
+  prog.textContent = "💾 Guardando reporte...";
+
   const cfg = TIPOS[tipoSel];
   const { data, error } = await sb.from("reportes").insert({
     user_id: currentUser.id,
@@ -678,17 +680,17 @@ async function actualizarRankingDesdeDB() {
 function actualizarRanking(pins) {
   const mapa = {};
   pins.forEach(p => {
-    if (!mapa[p.comuna]) mapa[p.comuna]={ nombre:p.comuna, tipo:"comuna", pts:0, reportes:0, limpios:0 };
+    const key = p.comuna || "Chile";
+    if (!mapa[key]) mapa[key] = { nombre:key, tipo:"comuna", pts:0, reportes:0, limpios:0 };
     if (p.estado === "limpio") {
-      // Recupera el 100% de los puntos al limpiar
-      mapa[p.comuna].limpios++;
+      mapa[key].limpios++;
     } else {
-      mapa[p.comuna].pts += p.pts;
+      mapa[key].pts += p.pts;
     }
-    mapa[p.comuna].reportes++;
-    if (p.tipo==="Basura en autopista") mapa[p.comuna].tipo="autopista";
+    mapa[key].reportes++;
+    if (p.tipo === "Basura en autopista") mapa[key].tipo = "autopista";
   });
-  renderRanking(Object.values(mapa).sort((a,b)=>a.pts-b.pts));
+  renderRanking(Object.values(mapa).sort((a,b) => a.pts - b.pts));
 }
 
 function setRankFiltro(f, btn) {
@@ -725,48 +727,30 @@ function renderRanking(lista) {
 }
 
 // ── DETECTAR COMUNA ──
-function detectarComuna(lat, lng) {
-  const comunas=[
-    {nombre:"Lo Barnechea",latMin:-33.32,latMax:-33.37,lngMin:-70.57,lngMax:-70.48},
-    {nombre:"Las Condes",latMin:-33.37,latMax:-33.44,lngMin:-70.60,lngMax:-70.48},
-    {nombre:"Vitacura",latMin:-33.37,latMax:-33.42,lngMin:-70.63,lngMax:-70.58},
-    {nombre:"Providencia",latMin:-33.42,latMax:-33.45,lngMin:-70.63,lngMax:-70.57},
-    {nombre:"Ñuñoa",latMin:-33.44,latMax:-33.48,lngMin:-70.63,lngMax:-70.57},
-    {nombre:"La Reina",latMin:-33.43,latMax:-33.48,lngMin:-70.57,lngMax:-70.50},
-    {nombre:"Peñalolén",latMin:-33.47,latMax:-33.54,lngMin:-70.57,lngMax:-70.48},
-    {nombre:"Macul",latMin:-33.48,latMax:-33.52,lngMin:-70.63,lngMax:-70.57},
-    {nombre:"La Florida",latMin:-33.51,latMax:-33.58,lngMin:-70.62,lngMax:-70.54},
-    {nombre:"La Pintana",latMin:-33.55,latMax:-33.62,lngMin:-70.67,lngMax:-70.60},
-    {nombre:"San Bernardo",latMin:-33.58,latMax:-33.68,lngMin:-70.73,lngMax:-70.60},
-    {nombre:"La Granja",latMin:-33.52,latMax:-33.56,lngMin:-70.66,lngMax:-70.61},
-    {nombre:"El Bosque",latMin:-33.55,latMax:-33.59,lngMin:-70.69,lngMax:-70.64},
-    {nombre:"Pedro Aguirre Cerda",latMin:-33.49,latMax:-33.53,lngMin:-70.70,lngMax:-70.65},
-    {nombre:"San Miguel",latMin:-33.48,latMax:-33.52,lngMin:-70.69,lngMax:-70.64},
-    {nombre:"Lo Espejo",latMin:-33.51,latMax:-33.56,lngMin:-70.73,lngMax:-70.68},
-    {nombre:"Estación Central",latMin:-33.45,latMax:-33.50,lngMin:-70.72,lngMax:-70.67},
-    {nombre:"Pudahuel",latMin:-33.43,latMax:-33.52,lngMin:-70.80,lngMax:-70.71},
-    {nombre:"Maipú",latMin:-33.49,latMax:-33.57,lngMin:-70.80,lngMax:-70.71},
-    {nombre:"Cerrillos",latMin:-33.49,latMax:-33.54,lngMin:-70.74,lngMax:-70.69},
-    {nombre:"Quilicura",latMin:-33.34,latMax:-33.40,lngMin:-70.76,lngMax:-70.68},
-    {nombre:"Huechuraba",latMin:-33.34,latMax:-33.39,lngMin:-70.68,lngMax:-70.61},
-    {nombre:"Recoleta",latMin:-33.39,latMax:-33.43,lngMin:-70.66,lngMax:-70.62},
-    {nombre:"Independencia",latMin:-33.41,latMax:-33.44,lngMin:-70.67,lngMax:-70.64},
-    {nombre:"Conchalí",latMin:-33.37,latMax:-33.41,lngMin:-70.69,lngMax:-70.65},
-    {nombre:"Renca",latMin:-33.39,latMax:-33.43,lngMin:-70.74,lngMax:-70.68},
-    {nombre:"Lo Prado",latMin:-33.43,latMax:-33.47,lngMin:-70.75,lngMax:-70.70},
-    {nombre:"Cerro Navia",latMin:-33.42,latMax:-33.46,lngMin:-70.77,lngMax:-70.73},
-    {nombre:"Quinta Normal",latMin:-33.43,latMax:-33.46,lngMin:-70.71,lngMax:-70.67},
-    {nombre:"Santiago Centro",latMin:-33.43,latMax:-33.47,lngMin:-70.68,lngMax:-70.63},
-  ];
-  for(const c of comunas){
-    if(lat>=c.latMin&&lat<=c.latMax&&lng>=c.lngMin&&lng<=c.lngMax) return c.nombre;
+// ── DETECTAR COMUNA — Todo Chile via Nominatim ──
+async function detectarComuna(lat, lng) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=es`,
+      { headers: { "User-Agent": "LIF.APP/1.0 contacto@lif.app" } }
+    );
+    const data = await res.json();
+    const addr = data.address || {};
+
+    // Nominatim devuelve distintos campos según la zona
+    const comuna = addr.municipality || addr.city || addr.town || addr.village || addr.county || addr.state_district || "Chile";
+    const region = addr.state || "";
+
+    // Si es autopista o ruta, devolver nombre de la vía
+    if (addr.road && (addr.road.toLowerCase().includes("autopista") || addr.road.toLowerCase().includes("ruta"))) {
+      return addr.road;
+    }
+
+    return region ? `${comuna}, ${region}` : comuna;
+  } catch(e) {
+    console.warn("Nominatim error:", e);
+    return "Chile";
   }
-  let closest="Santiago",minDist=Infinity;
-  for(const c of comunas){
-    const d=Math.sqrt((lat-(c.latMin+c.latMax)/2)**2+(lng-(c.lngMin+c.lngMax)/2)**2);
-    if(d<minDist){minDist=d;closest=c.nombre;}
-  }
-  return closest;
 }
 
 // ── VISTA ──
