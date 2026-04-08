@@ -4,6 +4,14 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>LIF.APP — Por un País Limpio</title>
+<link rel="manifest" href="/manifest.json"/>
+<meta name="theme-color" content="#16a34a"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="LIF.APP"/>
+<link rel="apple-touch-icon" href="/icon-192.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png"/>
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
@@ -672,6 +680,15 @@ async function cargarPerfil() {
       <div style="text-align:right;flex-shrink:0"><div style="font-size:16px;font-weight:900;color:#ef4444">${r.pts}</div><div style="font-size:10px;color:#94a3b8">pts</div><div style="font-size:11px;color:#64748b;margin-top:2px">×${r.verificaciones||1} vistos</div></div>
     </div>`;
   }).join("");
+}
+
+// ── PWA SERVICE WORKER ──
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js")
+      .then(() => console.log("SW registrado"))
+      .catch(e => console.warn("SW error:", e));
+  });
 }
 
 // ── UTILS ──
