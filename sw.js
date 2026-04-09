@@ -1,4 +1,4 @@
-const CACHE = "lif-app-v2";
+const CACHE = "lif-app-v5";
 const ASSETS = ["/", "/index.html", "/manifest.json"];
 
 self.addEventListener("install", e => {
