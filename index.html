@@ -139,30 +139,22 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
   <!-- FILTROS MAPA -->
   <div id="filtrosBar" style="display:none;position:absolute;top:82px;left:12px;right:12px;z-index:190">
     <div style="display:flex;align-items:center;gap:8px;">
-
-      <!-- Botón filtro siempre visible -->
-      <button id="btnFiltros" onclick="toggleFiltros()"
-        style="flex-shrink:0;display:flex;align-items:center;gap:5px;padding:8px 13px;border-radius:20px;font-size:12px;font-weight:800;cursor:pointer;border:none;font-family:'Nunito',sans-serif;background:#fff;color:#1e293b;box-shadow:0 2px 8px rgba(0,0,0,0.1);border:1px solid rgba(0,0,0,0.06);white-space:nowrap">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
-        Filtros
+      <button id="btnFiltros" onclick="toggleFiltros()" style="flex-shrink:0;display:inline-flex;align-items:center;gap:5px;padding:8px 13px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:'Nunito',sans-serif;background:#fff;color:#1e293b;box-shadow:0 2px 8px rgba(0,0,0,0.12);white-space:nowrap">
+        ☰ Filtros
         <span id="filtroBadge" style="display:none;background:#16a34a;color:#fff;border-radius:8px;padding:1px 5px;font-size:10px">0</span>
       </button>
-
-      <!-- Chips — ocultos por defecto, aparecen al tocar Filtros -->
-      <div id="filtrosChips" style="display:none;overflow-x:auto;-webkit-overflow-scrolling:touch;min-width:0;">
-        <div style="display:flex;gap:6px;padding:2px 0">
+      <div id="filtrosChips" style="display:none;flex:1;overflow-x:auto;-webkit-overflow-scrolling:touch;">
+        <div style="display:flex;gap:6px;">
           <button id="fest-todos" onclick="setFiltroEstado('todos',this)" style="flex-shrink:0;padding:7px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:'Nunito',sans-serif;background:#1e293b;color:#fff;white-space:nowrap">Todos</button>
-          <button id="fest-activo" onclick="setFiltroEstado('activo',this)" style="flex-shrink:0;padding:7px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:'Nunito',sans-serif;background:#fff;color:#64748b;box-shadow:0 2px 8px rgba(0,0,0,0.1);white-space:nowrap">🔴 Activos</button>
-          <button id="fest-limpio" onclick="setFiltroEstado('limpio',this)" style="flex-shrink:0;padding:7px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:'Nunito',sans-serif;background:#fff;color:#64748b;box-shadow:0 2px 8px rgba(0,0,0,0.1);white-space:nowrap">✅ Limpios</button>
+          <button id="fest-activo" onclick="setFiltroEstado('activo',this)" style="flex-shrink:0;padding:7px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:'Nunito',sans-serif;background:#fff;color:#64748b;box-shadow:0 2px 6px rgba(0,0,0,0.1);white-space:nowrap">🔴 Activos</button>
+          <button id="fest-limpio" onclick="setFiltroEstado('limpio',this)" style="flex-shrink:0;padding:7px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:'Nunito',sans-serif;background:#fff;color:#64748b;box-shadow:0 2px 6px rgba(0,0,0,0.1);white-space:nowrap">✅ Limpios</button>
           <div style="width:1px;background:rgba(0,0,0,0.15);margin:4px 0;flex-shrink:0"></div>
-          <button id="ftipo-Basura" onclick="setFiltroTipo('Basura',this)" style="flex-shrink:0;padding:7px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:'Nunito',sans-serif;background:#fff;color:#64748b;box-shadow:0 2px 8px rgba(0,0,0,0.1);white-space:nowrap">🗑️ Basura</button>
-          <button id="ftipo-Residuos domiciliarios" onclick="setFiltroTipo('Residuos domiciliarios',this)" style="flex-shrink:0;padding:7px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:'Nunito',sans-serif;background:#fff;color:#64748b;box-shadow:0 2px 8px rgba(0,0,0,0.1);white-space:nowrap">🛢️ Domiciliarios</button>
-          <button id="ftipo-Escombros" onclick="setFiltroTipo('Escombros',this)" style="flex-shrink:0;padding:7px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:'Nunito',sans-serif;background:#fff;color:#64748b;box-shadow:0 2px 8px rgba(0,0,0,0.1);white-space:nowrap">🧱 Escombros</button>
-          <button id="ftipo-Residuos peligrosos" onclick="setFiltroTipo('Residuos peligrosos',this)" style="flex-shrink:0;padding:7px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:'Nunito',sans-serif;background:#fff;color:#64748b;box-shadow:0 2px 8px rgba(0,0,0,0.1);white-space:nowrap">☠️ Peligrosos</button>
-          
+          <button id="ftipo-Basura" onclick="setFiltroTipo('Basura',this)" style="flex-shrink:0;padding:7px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:'Nunito',sans-serif;background:#fff;color:#64748b;box-shadow:0 2px 6px rgba(0,0,0,0.1);white-space:nowrap">🗑️ Basura</button>
+          <button id="ftipo-Residuos domiciliarios" onclick="setFiltroTipo('Residuos domiciliarios',this)" style="flex-shrink:0;padding:7px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:'Nunito',sans-serif;background:#fff;color:#64748b;box-shadow:0 2px 6px rgba(0,0,0,0.1);white-space:nowrap">🛢️ Domiciliarios</button>
+          <button id="ftipo-Escombros" onclick="setFiltroTipo('Escombros',this)" style="flex-shrink:0;padding:7px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:'Nunito',sans-serif;background:#fff;color:#64748b;box-shadow:0 2px 6px rgba(0,0,0,0.1);white-space:nowrap">🧱 Escombros</button>
+          <button id="ftipo-Residuos peligrosos" onclick="setFiltroTipo('Residuos peligrosos',this)" style="flex-shrink:0;padding:7px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:'Nunito',sans-serif;background:#fff;color:#64748b;box-shadow:0 2px 6px rgba(0,0,0,0.1);white-space:nowrap">☠️ Peligrosos</button>
         </div>
       </div>
-
     </div>
   </div>
 
@@ -371,7 +363,7 @@ async function onMapLoad() {
     rotateTruck(pos.coords.heading);
   },null,{enableHighAccuracy:true});
   hide("loading");
-  showEl("header","block"); showEl("reportBtn","flex"); showEl("navbar","flex"); showEl("filtrosBar","flex");
+  showEl("header","block"); showEl("reportBtn","flex"); showEl("navbar","flex"); showEl("filtrosBar","block");
   buildTipoList();
   await cargarPins();
 }
@@ -394,6 +386,7 @@ function toggleFiltros() {
   chips.style.display = abierto ? "none" : "flex";
   btn.style.background = abierto ? "#fff" : "#1e293b";
   btn.style.color = abierto ? "#1e293b" : "#fff";
+  btn.style.boxShadow = abierto ? "0 2px 8px rgba(0,0,0,0.12)" : "0 2px 12px rgba(0,0,0,0.2)";
 }
 
 function setFiltroEstado(v, btn) {
@@ -696,7 +689,7 @@ function setVista(v) {
   vista = v;
   document.getElementById("rankScreen").classList.toggle("on", v==="ranking");
   document.getElementById("perfilScreen").style.display = v==="perfil" ? "flex" : "none";
-  document.getElementById("filtrosBar").style.display = v==="mapa" ? "flex" : "none";
+  document.getElementById("filtrosBar").style.display = v==="mapa" ? "block" : "none";
   ["navMapa","navRank","navPerfil"].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.opacity="0.3"; });
   const navMap = { mapa:"navMapa", ranking:"navRank", perfil:"navPerfil" };
   const active = navMap[v]; if(active&&document.getElementById(active)) document.getElementById(active).style.opacity="1";
