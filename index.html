@@ -158,6 +158,14 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
     </div>
   </div>
 
+  <!-- BTN HEATMAP -->
+  <div id="btnHeatmap" style="display:none;position:absolute;top:82px;right:12px;z-index:190">
+    <button onclick="toggleHeatmap()" id="heatmapBtn"
+      style="display:flex;align-items:center;gap:6px;padding:8px 13px;border-radius:20px;font-size:12px;font-weight:700;border:none;font-family:'Nunito',sans-serif;background:#fff;color:#1e293b;box-shadow:0 2px 8px rgba(0,0,0,0.12);cursor:pointer;white-space:nowrap">
+      🌡️ Calor
+    </button>
+  </div>
+
   <!-- BTN REPORTAR -->
   <div id="reportBtn" style="display:none;position:absolute;bottom:90px;left:50%;transform:translateX(-50%);z-index:200;flex-direction:column;align-items:center;gap:6px">
     <button class="btn" onclick="iniciarReporte()" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#16a34a);border:4px solid rgba(255,255,255,0.25);box-shadow:0 4px 28px rgba(34,197,94,.65),0 0 0 10px rgba(34,197,94,.12);font-size:30px">📍</button>
@@ -178,6 +186,18 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
       <div style="font-size:13px;font-weight:700;color:#64748b;margin-bottom:10px">¿Qué tipo de problema?</div>
       <div id="tipoList" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
+
+    <!-- Foto opcional -->
+    <div style="margin-bottom:18px">
+      <div style="font-size:13px;font-weight:700;color:#64748b;margin-bottom:10px">Foto <span style="font-weight:400;color:#94a3b8">(opcional)</span></div>
+      <input type="file" id="fotoInput" accept="image/*" capture="environment" style="display:none" onchange="onFotoSelected(this)"/>
+      <div id="fotoBox" onclick="document.getElementById('fotoInput').click()"
+        style="height:90px;border:2px dashed #e2e8f0;border-radius:14px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;background:#f8fafc;position:relative;overflow:hidden">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <span style="font-size:13px;color:#94a3b8;font-weight:600">Toca para agregar foto</span>
+      </div>
+    </div>
+
     <div id="uploadProgress" style="display:none;padding:12px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;margin-bottom:14px;font-size:13px;color:#3b82f6;font-weight:600;text-align:center"></div>
     <div style="display:flex;gap:10px">
       <button class="btn" onclick="cancelarReporte()" style="flex:1;padding:13px;border-radius:12px;background:#f1f5f9;color:#64748b;font-size:14px;font-weight:600;border:1.5px solid #e2e8f0">Cancelar</button>
@@ -248,6 +268,11 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background
         <div style="background:#fff;border-radius:16px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.06)"><div style="font-size:28px;font-weight:900;color:#ef4444" id="statPts">0</div><div style="font-size:10px;color:#94a3b8;font-weight:700;margin-top:2px">PUNTOS</div></div>
         <div style="background:#fff;border-radius:16px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.06)"><div style="font-size:28px;font-weight:900;color:#3b82f6" id="statLimpios">0</div><div style="font-size:10px;color:#94a3b8;font-weight:700;margin-top:2px">LIMPIOS</div></div>
       </div>
+      <div style="font-size:13px;font-weight:800;color:#64748b;letter-spacing:.5px;margin-bottom:10px">MIS INSIGNIAS</div>
+      <div id="insigniasList" style="margin-bottom:20px">
+        <div style="text-align:center;color:#94a3b8;padding:20px;background:#fff;border-radius:16px;font-size:13px">Cargando insignias...</div>
+      </div>
+
       <div style="font-size:13px;font-weight:800;color:#64748b;letter-spacing:.5px;margin-bottom:10px">MIS REPORTES</div>
       <div id="misReportesList"><div style="text-align:center;color:#94a3b8;padding:32px 20px;background:#fff;border-radius:16px"><div style="font-size:32px;margin-bottom:8px">📍</div><div style="font-weight:700;color:#64748b;font-size:14px">Aún no has reportado</div><div style="font-size:12px;margin-top:4px">Toca el mapa y reporta tu primer punto crítico</div></div></div>
       <button class="btn" onclick="doLogout()" style="width:100%;margin-top:20px;padding:14px;border-radius:14px;background:#fff;border:1.5px solid #e2e8f0;color:#64748b;font-size:14px;font-weight:700">Cerrar sesión</button>
@@ -362,13 +387,45 @@ async function onMapLoad() {
     truckMarker.setLngLat([userLng,userLat]);
     rotateTruck(pos.coords.heading);
   },null,{enableHighAccuracy:true});
+
+  // Fuente vacía para el heatmap — se llena cuando cargan los pins
+  map.addSource("reportes-heat", {
+    type: "geojson",
+    data: { type:"FeatureCollection", features:[] }
+  });
+
+  // Capa heatmap
+  map.addLayer({
+    id: "heatmap-layer",
+    type: "heatmap",
+    source: "reportes-heat",
+    paint: {
+      "heatmap-weight": ["interpolate",["linear"],["get","pts"],0,0,25,1],
+      "heatmap-intensity": ["interpolate",["linear"],["zoom"],10,0.6,16,1.5],
+      "heatmap-radius": ["interpolate",["linear"],["zoom"],10,20,16,50],
+      "heatmap-opacity": 0.75,
+      "heatmap-color": [
+        "interpolate","linear",["heatmap-density"],
+        0,"rgba(0,0,0,0)",
+        0.2,"rgba(253,224,69,0.6)",
+        0.5,"rgba(251,146,60,0.8)",
+        0.8,"rgba(239,68,68,0.9)",
+        1,"rgba(185,28,28,1)"
+      ]
+    },
+    layout: { visibility: "none" }
+  });
+
   hide("loading");
   showEl("header","block"); showEl("reportBtn","flex"); showEl("navbar","flex"); showEl("filtrosBar","block");
+  showEl("btnHeatmap","flex");
   buildTipoList();
   await cargarPins();
 }
 
 // ── PINS ──
+let heatmapActivo = false;
+
 async function cargarPins() {
   const { data, error } = await sb.from("reportes").select("*").order("created_at",{ascending:false});
   if (error) { console.error(error); return; }
@@ -376,6 +433,33 @@ async function cargarPins() {
   data.forEach(p => agregarMarker(p));
   setText("pinCount", `${data.length} reporte${data.length!==1?"s":""}`);
   actualizarRanking(data);
+  actualizarHeatmap(data);
+}
+
+function actualizarHeatmap(pins) {
+  if (!map || !map.getSource("reportes-heat")) return;
+  const features = pins
+    .filter(p => p.estado !== "limpio")
+    .map(p => ({
+      type: "Feature",
+      geometry: { type:"Point", coordinates:[p.lng, p.lat] },
+      properties: { pts: Math.abs(p.pts) + (p.verificaciones||1) * 2 }
+    }));
+  map.getSource("reportes-heat").setData({ type:"FeatureCollection", features });
+}
+
+function toggleHeatmap() {
+  if (!map) return;
+  heatmapActivo = !heatmapActivo;
+  map.setLayoutProperty("heatmap-layer", "visibility", heatmapActivo ? "visible" : "none");
+  const btn = document.getElementById("heatmapBtn");
+  btn.style.background = heatmapActivo ? "#ef4444" : "#fff";
+  btn.style.color = heatmapActivo ? "#fff" : "#1e293b";
+  btn.textContent = heatmapActivo ? "🌡️ Calor ON" : "🌡️ Calor";
+  // Ocultar/mostrar markers al activar heatmap para mejor visual
+  Object.values(markerRefs).forEach(({ marker }) => {
+    marker.getElement().style.opacity = heatmapActivo ? "0.3" : "1";
+  });
 }
 
 // ── FILTROS ──
@@ -473,12 +557,51 @@ function checkPublicar() {
 }
 
 // ── REPORTE ──
+let fotoFile = null, fotoB64 = "";
+
 function iniciarReporte() {
-  hide("pinPopup"); showEl("sheetReporte","block"); tipoSel=""; hide("uploadProgress");
+  hide("pinPopup"); showEl("sheetReporte","block");
+  tipoSel = ""; fotoFile = null; fotoB64 = "";
+  hide("uploadProgress");
+  // Reset foto box
+  document.getElementById("fotoBox").innerHTML = `
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    <span style="font-size:13px;color:#94a3b8;font-weight:600">Toca para agregar foto</span>`;
+  document.getElementById("fotoBox").style.border = "2px dashed #e2e8f0";
+  document.getElementById("fotoInput").value = "";
   buildTipoList(); checkPublicar();
   setText("gpsLabel",`${userLat.toFixed(5)}, ${userLng.toFixed(5)}`);
 }
+
+function onFotoSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  fotoFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    fotoB64 = e.target.result;
+    const box = document.getElementById("fotoBox");
+    box.style.border = "2px solid #22c55e";
+    box.innerHTML = `
+      <img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:12px"/>
+      <div style="position:absolute;top:8px;right:8px;background:#16a34a;color:#fff;border-radius:8px;padding:3px 8px;font-size:11px;font-weight:700">✓ Foto lista</div>
+      <button onclick="quitarFoto(event)" style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,0.5);color:#fff;border:none;border-radius:8px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer">✕ Quitar</button>`;
+  };
+  reader.readAsDataURL(file);
+}
+
+function quitarFoto(e) {
+  e.stopPropagation();
+  fotoFile = null; fotoB64 = "";
+  document.getElementById("fotoInput").value = "";
+  document.getElementById("fotoBox").innerHTML = `
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    <span style="font-size:13px;color:#94a3b8;font-weight:600">Toca para agregar foto</span>`;
+  document.getElementById("fotoBox").style.border = "2px dashed #e2e8f0";
+}
+
 function cancelarReporte() { hide("sheetReporte"); }
+
 async function publicarPin() {
   if (!tipoSel) return;
   const btn = document.getElementById("btnPublicar");
@@ -486,11 +609,28 @@ async function publicarPin() {
   const prog = document.getElementById("uploadProgress");
   prog.style.display="block"; prog.textContent="📍 Detectando ubicación...";
   const comuna = await detectarComuna(userLat, userLng, tipoSel);
+
+  // Subir foto si existe
+  let foto_url = null;
+  if (fotoFile) {
+    prog.textContent="📷 Subiendo foto...";
+    try {
+      const ext = fotoFile.name.split(".").pop() || "jpg";
+      const path = `${currentUser.id}/${Date.now()}.${ext}`;
+      const { error: upErr } = await sb.storage.from("fotos-reportes").upload(path, fotoFile, { contentType: fotoFile.type });
+      if (!upErr) {
+        const { data: urlData } = sb.storage.from("fotos-reportes").getPublicUrl(path);
+        foto_url = urlData.publicUrl;
+      }
+    } catch(e) { console.warn("Error subiendo foto:", e); }
+  }
+
   prog.textContent="💾 Guardando reporte...";
   const cfg = TIPOS[tipoSel];
   const { data, error } = await sb.from("reportes").insert({
     user_id:currentUser.id, user_email:currentUser.email,
-    lat:userLat, lng:userLng, tipo:tipoSel, comuna, pts:cfg.pts, verificaciones:1, estado:"activo"
+    lat:userLat, lng:userLng, tipo:tipoSel, comuna, pts:cfg.pts,
+    verificaciones:1, estado:"activo", foto_url
   }).select().single();
   if (error) { prog.style.display="none"; notify("❌ Error al guardar. Intenta de nuevo."); btn.disabled=false; btn.textContent="📍 Reportar"; return; }
   todosLosPins.push(data);
@@ -499,7 +639,7 @@ async function publicarPin() {
   setText("pinCount",`${Object.keys(markerRefs).length} reportes`);
   await actualizarRankingDesdeDB();
   hide("sheetReporte"); hide("uploadProgress");
-  notify(`📍 Reporte en ${comuna} · ${cfg.pts} pts`);
+  notify(`📍 Reporte en ${comuna} · ${cfg.pts} pts${foto_url?" 📷":""}`);
 }
 
 // ── MARKERS ──
@@ -690,6 +830,7 @@ function setVista(v) {
   document.getElementById("rankScreen").classList.toggle("on", v==="ranking");
   document.getElementById("perfilScreen").style.display = v==="perfil" ? "flex" : "none";
   document.getElementById("filtrosBar").style.display = v==="mapa" ? "block" : "none";
+  document.getElementById("btnHeatmap").style.display = v==="mapa" ? "flex" : "none";
   ["navMapa","navRank","navPerfil"].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.opacity="0.3"; });
   const navMap = { mapa:"navMapa", ranking:"navRank", perfil:"navPerfil" };
   const active = navMap[v]; if(active&&document.getElementById(active)) document.getElementById(active).style.opacity="1";
@@ -699,18 +840,92 @@ function setVista(v) {
 }
 
 // ── PERFIL ──
+const INSIGNIAS = [
+  { id:"primer-reporte",  emoji:"🌱", nombre:"Vecino Activo",    desc:"Tu primer reporte",           check: (r,c) => r.length >= 1 },
+  { id:"5-reportes",      emoji:"🔍", nombre:"Ojo Ciudadano",    desc:"5 reportes realizados",        check: (r,c) => r.length >= 5 },
+  { id:"10-reportes",     emoji:"📣", nombre:"Voz del Barrio",   desc:"10 reportes realizados",       check: (r,c) => r.length >= 10 },
+  { id:"25-reportes",     emoji:"🦸", nombre:"Guardián Urbano",  desc:"25 reportes realizados",       check: (r,c) => r.length >= 25 },
+  { id:"50-reportes",     emoji:"🏆", nombre:"Héroe LIF",        desc:"50 reportes realizados",       check: (r,c) => r.length >= 50 },
+  { id:"1-limpio",        emoji:"🧹", nombre:"Limpiador",        desc:"1 reporte limpiado",           check: (r,c) => r.filter(x=>x.estado==="limpio").length >= 1 },
+  { id:"5-limpios",       emoji:"✨", nombre:"Barrio Limpio",    desc:"5 reportes limpios",           check: (r,c) => r.filter(x=>x.estado==="limpio").length >= 5 },
+  { id:"10-confirmados",  emoji:"👥", nombre:"Confirmador",      desc:"10 confirmaciones a otros",    check: (r,c) => c >= 10 },
+  { id:"3-comunas",       emoji:"🌎", nombre:"Explorer",         desc:"Reportar en 3 comunas",        check: (r,c) => new Set(r.map(x=>x.comuna)).size >= 3 },
+  { id:"racha-7",         emoji:"🔥", nombre:"En Racha",         desc:"7 días seguidos reportando",   check: (r,c) => tieneSemanaSeguidaRacha(r) },
+];
+
+function tieneSemanaSeguidaRacha(reportes) {
+  if (reportes.length < 7) return false;
+  const dias = [...new Set(reportes.map(r => new Date(r.created_at).toDateString()))];
+  if (dias.length < 7) return false;
+  const sorted = dias.map(d => new Date(d)).sort((a,b)=>a-b);
+  let racha = 1;
+  for (let i = 1; i < sorted.length; i++) {
+    const diff = (sorted[i] - sorted[i-1]) / 86400000;
+    if (diff === 1) { racha++; if (racha >= 7) return true; }
+    else racha = 1;
+  }
+  return false;
+}
+
 async function cargarPerfil() {
   if (!currentUser) return;
   const nombre = currentUser.user_metadata?.nombre || currentUser.email?.split("@")[0] || "Usuario";
   setText("perfilNombre", nombre); setText("perfilEmail", currentUser.email||"");
   setText("perfilMiembro", `Miembro desde ${new Date(currentUser.created_at).toLocaleDateString("es-CL",{month:"long",year:"numeric"})}`);
+
   const { data: misReportes } = await sb.from("reportes").select("*").eq("user_id",currentUser.id).order("created_at",{ascending:false});
-  if (!misReportes||misReportes.length===0) { setText("statReportes","0"); setText("statPts","0"); setText("statLimpios","0"); return; }
-  setText("statReportes", misReportes.length);
-  setText("statPts", misReportes.reduce((a,r)=>a+Math.abs(r.pts),0));
-  setText("statLimpios", misReportes.filter(r=>r.estado==="limpio").length);
+  const { count: confirmCount } = await sb.from("confirmaciones").select("*",{count:"exact",head:true}).eq("user_id",currentUser.id).eq("tipo","visto");
+
+  const reportes = misReportes || [];
+  const confCount = confirmCount || 0;
+
+  setText("statReportes", reportes.length);
+  setText("statPts", reportes.reduce((a,r)=>a+Math.abs(r.pts),0));
+  setText("statLimpios", reportes.filter(r=>r.estado==="limpio").length);
+
+  // Renderizar insignias
+  const insEl = document.getElementById("insigniasList");
+  const ganadas = INSIGNIAS.filter(i => i.check(reportes, confCount));
+  const pendientes = INSIGNIAS.filter(i => !i.check(reportes, confCount));
+
+  let insHTML = "";
+  if (ganadas.length > 0) {
+    insHTML += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">`;
+    insHTML += ganadas.map(i => `
+      <div style="background:#fff;border-radius:14px;padding:12px;display:flex;align-items:center;gap:10px;border:1.5px solid #bbf7d0;box-shadow:0 1px 4px rgba(0,0,0,0.05)">
+        <div style="font-size:26px;flex-shrink:0">${i.emoji}</div>
+        <div>
+          <div style="font-size:12px;font-weight:800;color:#16a34a">${i.nombre}</div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:1px">${i.desc}</div>
+        </div>
+      </div>`).join("");
+    insHTML += `</div>`;
+  }
+
+  if (pendientes.length > 0) {
+    if (ganadas.length > 0) insHTML += `<div style="font-size:11px;font-weight:700;color:#94a3b8;margin-bottom:8px;letter-spacing:.5px">POR GANAR</div>`;
+    insHTML += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">`;
+    insHTML += pendientes.map(i => `
+      <div style="background:#f8fafc;border-radius:14px;padding:12px;display:flex;align-items:center;gap:10px;border:1.5px solid #e2e8f0;opacity:0.6">
+        <div style="font-size:26px;flex-shrink:0;filter:grayscale(1)">${i.emoji}</div>
+        <div>
+          <div style="font-size:12px;font-weight:800;color:#94a3b8">${i.nombre}</div>
+          <div style="font-size:10px;color:#cbd5e1;margin-top:1px">${i.desc}</div>
+        </div>
+      </div>`).join("");
+    insHTML += `</div>`;
+  }
+
+  if (ganadas.length === 0 && pendientes.length === 0) {
+    insHTML = `<div style="text-align:center;color:#94a3b8;padding:20px;background:#fff;border-radius:16px;font-size:13px">Haz tu primer reporte para ganar insignias 🌱</div>`;
+  }
+
+  insEl.innerHTML = insHTML;
+
+  // Lista reportes
+  if (reportes.length === 0) { document.getElementById("misReportesList").innerHTML = `<div style="text-align:center;color:#94a3b8;padding:32px 20px;background:#fff;border-radius:16px"><div style="font-size:32px;margin-bottom:8px">📍</div><div style="font-weight:700;color:#64748b;font-size:14px">Aún no has reportado</div></div>`; return; }
   const TIPOS_EMO = {"Basura":"🗑️","Residuos domiciliarios":"🛢️","Escombros":"🧱","Residuos peligrosos":"☠️"};
-  document.getElementById("misReportesList").innerHTML = misReportes.map(r=>{
+  document.getElementById("misReportesList").innerHTML = reportes.map(r=>{
     const fecha = new Date(r.created_at).toLocaleDateString("es-CL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
     const limpio = r.estado==="limpio";
     return `<div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,0.05);display:flex;align-items:center;gap:12px;border-left:3px solid ${limpio?"#22c55e":"#ef4444"}">
