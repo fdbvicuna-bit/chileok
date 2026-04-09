@@ -667,23 +667,8 @@ async function detectarComuna(lat, lng, tipo = "") {
     const data = await res.json();
     const addr = data.address || {};
 
-    // Solo buscar autopista si el tipo es explícitamente "Basura en autopista"
-    if (tipo === "Basura en autopista") {
-      const road = addr.road || addr.motorway || addr.trunk || "";
-      const isHighway =
-        road.toLowerCase().includes("autopista") ||
-        road.match(/^ruta\s+/i) ||
-        data.class === "highway" ||
-        data.type === "motorway";
-
-      if (isHighway && road) return road;
-
-      // Fallback con comuna si no detectó autopista
-      const comunaFallback = addr.municipality || addr.city || addr.town || addr.village || "Chile";
-      return `Autopista - ${comunaFallback}`;
-    }
-
-    // Para todos los demás tipos → comuna normal, nunca autopista
+    
+    // Comuna normal
     const comuna =
       addr.municipality ||
       addr.city_district ||
