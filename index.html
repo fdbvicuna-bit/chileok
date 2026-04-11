@@ -687,10 +687,10 @@ async function eliminarPin(id) {
   // Eliminar marker del mapa
   const ref = markerRefs[id];
   if (ref) { ref.marker.remove(); delete markerRefs[id]; }
-  // Eliminar de todosLosPins
+  // Eliminar de todosLosPins y recalcular ranking inmediatamente
   todosLosPins = todosLosPins.filter(p => p.id !== id);
   setText("pinCount", `${Object.keys(markerRefs).length} reporte${Object.keys(markerRefs).length!==1?"s":""}`);
-  await actualizarRankingDesdeDB();
+  actualizarRanking(todosLosPins);
   cerrarPopup();
   notify("🗑️ Reporte eliminado");
 }
